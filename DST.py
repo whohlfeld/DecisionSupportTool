@@ -1,7 +1,10 @@
 # This Python file uses the following encoding: utf-8
 
 from Tkinter import *
+from numpy import *
 
+
+#-------------Funktionen-----------------------
 def leer():
     return
 
@@ -9,7 +12,29 @@ def schliessen(event=None):
     root.destroy()
     return
 
+dateihandler = open("Inputs_WHO.csv")
+inhalt = dateihandler.read()
+zeilen = inhalt.split("\n")
 
+inputTabelle = []
+
+for i in range(len(zeilen)):
+    spalten = zeilen[i].split(";")
+    inputTabelle.append(spalten)
+    inputTabelle[i][1:] =[float(zahl)for zahl in inputTabelle[i][1:]]
+
+pvOutput= [zeile[1] for zeile in inputTabelle] #die spalte PVOutput wird aus der Inputtabelle ausgelesen.
+
+
+
+print(inputTabelle[2][1])
+print(inputTabelle[2])
+
+print(inputTabelle.__len__())
+
+print(pvOutput)
+
+#----------------------------------------------------------GUI-----------------------------------------------------
 
 #-------------Hauptfenster initialisieren------
 
