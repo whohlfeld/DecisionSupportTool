@@ -3,26 +3,36 @@
 from Tkinter import *
 from numpy import *
 
-# -------------------------------------------Einlesen der CSV---------------------------------------------------------------
-
-dateihandler = open("Inputs_WHO.csv")
-inhalt = dateihandler.read()
-zeilen = inhalt.split("\n")
-
-inputTabelle = []
-
-for i in range(len(zeilen)):
-    spalten = zeilen[i].split(";")
-    inputTabelle.append(spalten)
-    inputTabelle[i][1:] =[float(zahl)for zahl in inputTabelle[i][1:]]
+# ------------------------------------------Variablendeklaration-----------------------------------------------------------
 
 pvOutput = []
-for zeile in inputTabelle:
-    pvOutput.append(zeile[1])
+lastgang = []
 
-# print(inputTabelle[2][1]) # wert zeile 2 Spalte 1 der Input Tabelle anzeigen lassen
 
-# print(inputTabelle.__len__()) # länge der inputabelle anzeigen lassen
+# -------------------------------------------Einlesen der CSV---------------------------------------------------------------
+
+def berechnen():
+    dateihandler = open(entryInput.get())
+    inhalt = dateihandler.read()
+    zeilen = inhalt.split("\n")
+
+    inputTabelle = []
+
+    for i in range(len(zeilen)):
+        spalten = zeilen[i].split(";")
+        inputTabelle.append(spalten)
+        inputTabelle[i][1:] =[float(zahl)for zahl in inputTabelle[i][1:]]
+
+
+    pvOutput = [zeile[1] for zeile in inputTabelle]
+
+    lastgang = [zeile[4] for zeile in inputTabelle]
+
+    textErgebnis.insert(END,"Fertig")
+
+    # print(inputTabelle[2][1]) # wert zeile 2 Spalte 1 der Input Tabelle anzeigen lassen
+
+    # print(inputTabelle.__len__()) # länge der inputabelle anzeigen lassen
 
 #----------------------------------------------------------GUI-----------------------------------------------------
 
@@ -33,10 +43,6 @@ def leer():
 
 def schliessen(event=None):
     root.destroy()
-    return
-
-def einfuegen():
-    textErgebnis.insert(END, str(pvOutput[1]) + "\n")
     return
 
 #-------------Hauptfenster initialisieren------
@@ -51,13 +57,13 @@ frameLinks =Frame(root, width=500, height=100)
 
 labelDateneingabe= Label(frameLinks, text ="Dateneingabe")
 
-labelLastgang= Label(frameLinks, text = "Lastgang")
-entryLastgang = Entry(frameLinks, width = 20)
+labelInput= Label(frameLinks, text = "Name der Input-Datei")
+entryInput = Entry(frameLinks, width = 20)
 
 labelFlaeche= Label(frameLinks, text="Fläche der Solaranlage")
 entryFlaeche = Entry(frameLinks, width = 20)
 
-buttonBerechnen = Button(frameLinks,text= "Berechnen", command=einfuegen)
+buttonBerechnen = Button(frameLinks,text= "Berechnen", command=berechnen)
 
 textErgebnis= Text(frameRechts, width = 50, height =20)
 
@@ -94,8 +100,8 @@ editMenu.add_command(label="Wiederholen", command= leer)
 frameRechts.pack(side = RIGHT)
 frameLinks.pack(side = LEFT)
 
-labelLastgang.pack()
-entryLastgang.pack()
+labelInput.pack()
+entryInput.pack()
 
 emptyLabel1.pack()
 
