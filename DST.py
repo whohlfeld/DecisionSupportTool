@@ -2,6 +2,7 @@
 
 from Tkinter import *
 from numpy import *
+import sys
 
 # ------------------------------------------Variablendeklaration-----------------------------------------------------------
 
@@ -11,9 +12,16 @@ lastgang = []
 
 # -------------------------------------------Einlesen der CSV---------------------------------------------------------------
 
+
 def berechnen():
     dateihandler = open(entryInput.get())
-    inhalt = dateihandler.read()
+
+    try:
+        inhalt = dateihandler.read()
+
+    except IOError:
+        textErgebnis.insert(END, "Der Dateiname fehlt!")
+
     zeilen = inhalt.split("\n")
 
     inputTabelle = []
