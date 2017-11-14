@@ -20,11 +20,9 @@ pvOutput = []
 for zeile in inputTabelle:
     pvOutput.append(zeile[1])
 
-
 # print(inputTabelle[2][1]) # wert zeile 2 Spalte 1 der Input Tabelle anzeigen lassen
 
 # print(inputTabelle.__len__()) # länge der inputabelle anzeigen lassen
-
 
 #----------------------------------------------------------GUI-----------------------------------------------------
 
@@ -41,7 +39,6 @@ def einfuegen():
     textErgebnis.insert(END, str(pvOutput[1]) + "\n")
     return
 
-
 #-------------Hauptfenster initialisieren------
 
 root = Tk()
@@ -51,7 +48,6 @@ root.title("Decision Support Tool")
 
 frameRechts =Frame(root, width=500, height=100)
 frameLinks =Frame(root, width=500, height=100)
-
 
 labelDateneingabe= Label(frameLinks, text ="Dateneingabe")
 
@@ -67,7 +63,6 @@ textErgebnis= Text(frameRechts, width = 50, height =20)
 
 emptyLabel1 = Label(frameLinks, text="")
 emptyLabel2 = Label(frameLinks, text="")
-
 
 #-------------Events---------------------------
 
@@ -93,8 +88,6 @@ editMenu = Menu(mLeiste)
 mLeiste.add_cascade(label="Edit", menu= editMenu)
 editMenu.add_command(label="Rückgängig", command= leer)
 editMenu.add_command(label="Wiederholen", command= leer)
-
-
 
 #-------------Widgets platzieren---------------
 
