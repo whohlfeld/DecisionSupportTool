@@ -3,14 +3,7 @@
 from Tkinter import *
 from numpy import *
 
-
-#-------------Funktionen-----------------------
-def leer():
-    return
-
-def schliessen(event=None):
-    root.destroy()
-    return
+# -------------------------------------------Einlesen der CSV---------------------------------------------------------------
 
 dateihandler = open("Inputs_WHO.csv")
 inhalt = dateihandler.read()
@@ -23,18 +16,28 @@ for i in range(len(zeilen)):
     inputTabelle.append(spalten)
     inputTabelle[i][1:] =[float(zahl)for zahl in inputTabelle[i][1:]]
 
-pvOutput= [zeile[1] for zeile in inputTabelle] #die spalte PVOutput wird aus der Inputtabelle ausgelesen.
+pvOutput = []
+for zeile in inputTabelle:
+    pvOutput.append(zeile[1])
 
+# print(inputTabelle[2][1]) # wert zeile 2 Spalte 1 der Input Tabelle anzeigen lassen
 
-
-print(inputTabelle[2][1])
-print(inputTabelle[2])
-
-print(inputTabelle.__len__())
-
-print(pvOutput)
+# print(inputTabelle.__len__()) # länge der inputabelle anzeigen lassen
 
 #----------------------------------------------------------GUI-----------------------------------------------------
+
+#----------------Funktionalität GUI------------
+
+def leer():
+    return
+
+def schliessen(event=None):
+    root.destroy()
+    return
+
+def einfuegen():
+    textErgebnis.insert(END, str(pvOutput[1]) + "\n")
+    return
 
 #-------------Hauptfenster initialisieren------
 
@@ -46,7 +49,6 @@ root.title("Decision Support Tool")
 frameRechts =Frame(root, width=500, height=100)
 frameLinks =Frame(root, width=500, height=100)
 
-
 labelDateneingabe= Label(frameLinks, text ="Dateneingabe")
 
 labelLastgang= Label(frameLinks, text = "Lastgang")
@@ -55,13 +57,12 @@ entryLastgang = Entry(frameLinks, width = 20)
 labelFlaeche= Label(frameLinks, text="Fläche der Solaranlage")
 entryFlaeche = Entry(frameLinks, width = 20)
 
-buttonBerechnen = Button(frameLinks,text= "Berechnen" )
+buttonBerechnen = Button(frameLinks,text= "Berechnen", command=einfuegen)
 
 textErgebnis= Text(frameRechts, width = 50, height =20)
 
 emptyLabel1 = Label(frameLinks, text="")
 emptyLabel2 = Label(frameLinks, text="")
-
 
 #-------------Events---------------------------
 
@@ -87,8 +88,6 @@ editMenu = Menu(mLeiste)
 mLeiste.add_cascade(label="Edit", menu= editMenu)
 editMenu.add_command(label="Rückgängig", command= leer)
 editMenu.add_command(label="Wiederholen", command= leer)
-
-
 
 #-------------Widgets platzieren---------------
 
