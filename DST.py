@@ -3,7 +3,7 @@
 from Tkinter import *
 from numpy import *
 
-# -------------------------------------------Programm---------------------------------------------------------------
+# -------------------------------------------Einlesen der CSV---------------------------------------------------------------
 
 dateihandler = open("Inputs_WHO.csv")
 inhalt = dateihandler.read()
