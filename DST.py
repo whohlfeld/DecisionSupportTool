@@ -1,8 +1,9 @@
 # This Python file uses the following encoding: utf-8
 
 from Tkinter import *
-from numpy import *
-import sys
+import pandas as pd
+
+
 
 # ------------------------------------------Variablendeklaration-----------------------------------------------------------
 
@@ -12,35 +13,12 @@ lastgang = []
 
 # -------------------------------------------Einlesen der CSV---------------------------------------------------------------
 
+data = pd.read_csv("Inputs_WHO.csv", sep=";")
 
 def berechnen():
-    dateihandler = open(entryInput.get())
-
-    try:
-        inhalt = dateihandler.read()
-
-    except IOError:
-        textErgebnis.insert(END, "Der Dateiname fehlt!")
-
-    zeilen = inhalt.split("\n")
-
-    inputTabelle = []
-
-    for i in range(len(zeilen)):
-        spalten = zeilen[i].split(";")
-        inputTabelle.append(spalten)
-        inputTabelle[i][1:] =[float(zahl)for zahl in inputTabelle[i][1:]]
-
-
-    pvOutput = [zeile[1] for zeile in inputTabelle]
-
-    lastgang = [zeile[4] for zeile in inputTabelle]
-
-    textErgebnis.insert(END,"Fertig")
-
-    # print(inputTabelle[2][1]) # wert zeile 2 Spalte 1 der Input Tabelle anzeigen lassen
-
-    # print(inputTabelle.__len__()) # länge der inputabelle anzeigen lassen
+    for i in data:
+        print(data.loc["Timestamp", i])
+    return
 
 #----------------------------------------------------------GUI-----------------------------------------------------
 
@@ -58,7 +36,11 @@ def schliessen(event=None):
 root = Tk()
 root.title("Decision Support Tool")
 
+berechnen()
+
 #-------------Widgets erstellen----------------
+scrollbar = Scrollbar(root)
+scrollbar.pack(side=RIGHT, fill=Y)
 
 frameRechts =Frame(root, width=500, height=100)
 frameLinks =Frame(root, width=500, height=100)
@@ -73,7 +55,9 @@ entryFlaeche = Entry(frameLinks, width = 20)
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=berechnen)
 
-textErgebnis= Text(frameRechts, width = 50, height =20)
+textErgebnis= Text(frameRechts, width = 70, height =20, yscrollcommand=scrollbar.set)
+
+scrollbar.config(command=textErgebnis.yview)
 
 emptyLabel1 = Label(frameLinks, text="")
 emptyLabel2 = Label(frameLinks, text="")

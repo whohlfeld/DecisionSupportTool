@@ -1,3 +1,4 @@
+Timestamp;PV usage [0:1];buy_el[ecent/kWh];sell_el[ecent/kWh];Lastgang_[W]
 01.01.2013 00:15;0;28;10;9500
 01.01.2013 00:30;0;28;10;8600
 01.01.2013 00:45;0;28;10;5500
