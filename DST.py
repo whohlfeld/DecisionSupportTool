@@ -1,28 +1,30 @@
 # This Python file uses the following encoding: utf-8
 
 from Tkinter import *
+import matplotlib as mpl
+import numpy as np
 import pandas as pd
 
 
 
 # ------------------------------------------Variablendeklaration-----------------------------------------------------------
 
-pvOutput = []
-lastgang = []
-
 
 # -------------------------------------------Einlesen der CSV---------------------------------------------------------------
 
-data = pd.read_csv("Inputs_WHO.csv", sep=";")
 
-def berechnen():
-    for i in data:
-        print(data.loc["Timestamp", i])
-    return
 
 #----------------------------------------------------------GUI-----------------------------------------------------
 
 #----------------Funktionalität GUI------------
+
+def berechnen():
+    data = pd.read_csv(entryInput.get(), sep=";")
+    i=0
+    while(i<data.__len__()):
+        textErgebnis.insert(END, data.loc[i, ["Timestamp"]])
+        i=i+1
+    return
 
 def leer():
     return
@@ -55,7 +57,7 @@ entryFlaeche = Entry(frameLinks, width = 20)
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=berechnen)
 
-textErgebnis= Text(frameRechts, width = 70, height =20, yscrollcommand=scrollbar.set)
+textErgebnis = Text(frameRechts, width = 70, height =20, yscrollcommand=scrollbar.set)
 
 scrollbar.config(command=textErgebnis.yview)
 
