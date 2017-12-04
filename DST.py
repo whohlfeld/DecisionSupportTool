@@ -1,6 +1,7 @@
 # This Python file uses the following encoding: utf-8
 
 from Tkinter import *
+from tkFileDialog   import askopenfilename
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
@@ -22,52 +23,76 @@ revPV = data.iat[0,3]# Einspeisevergütung in der betreffenden Stunde
 
 def berechnenErsparnis():
 
-    # roof = # Dachfläche in Quadratmetern
+    try:
 
-    # normPower = # Normleistung eines Quadratmeters Solaranlage
+        textErgebnis.delete(END)
 
-    pvCap = 4800# PV Kapazität in Watt, soll nachher auch eingelesen werden
+        investCost = float(entryCost.get())# investitionskosten pro m²
 
-    data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
+        roofSpace = int(entryFlaeche.get())# Dachfläche in Quadratmetern
 
-    textErgebnis.insert(END, data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
-    textErgebnis.insert(END, "\n\n")
+        normPower = float(entryPower.get())# Normleistung eines Quadratmeters Solaranlage
 
-    i=0
-    savings = 0
-    while(i<data.__len__()):
+        pvCap = roofSpace*normPower# PV Kapazität in Watt, soll nachher auch eingelesen werden
+
+        try:
+            data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
+
+        except:
+            textErgebnis.insert(END, "Der Dateipfad ist nicht korrekt\n")
+
+        textErgebnis.insert(END, data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
+        textErgebnis.insert(END, "\n\n")
 
 
-        if (((data.iat[i,1])*pvCap)>(data.iat[i,4])): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
-            textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(data.iat[i,0]) + "\n")
-            savings = savings + (((data.iat[i,1])*pvCap)/1000)-((data.iat[i,4])*data.iat[0,3]/1000) # die savings werden um die Einspeisevergütung erhöht
+        i=0
+        savings = 0
+        while(i<data.__len__()):
 
-        else:
-            savings = savings + ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100) # print durch textErgebnis.insert(), END auswechseln
-            #                (Lastgang [W] * Stromkosten [cent/KWh]/100)- (Lastgang [W]- PV Auslastung * PV Kapazität [W])* Stromkosten [cent/KWh]/100)
-            #                (                  in Euro                                                                         in Euro
-        i=i+1
 
-    textErgebnis.insert(END, "\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€")
+            if (((data.iat[i,1])*pvCap)>(data.iat[i,4])): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+                textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(data.iat[i,0]) + "\n")
+                savings = savings + (((data.iat[i,1])*pvCap)/1000)-((data.iat[i,4])*data.iat[0,3]/1000) # die savings werden um die Einspeisevergütung erhöht
 
-    #-------------------Plotten der Kurven---------------------------
-    '''
-    x = np.linspace(0, 35039,35039)
+            else:
+                savings = savings + ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100) # print durch textErgebnis.insert(), END auswechseln
+                #                (Lastgang [W] * Stromkosten [cent/KWh]/100)- (Lastgang [W]- PV Auslastung * PV Kapazität [W])* Stromkosten [cent/KWh]/100)
+                #                (                  in Euro                                                                         in Euro
+            i=i+1
 
-    plot = data.plot(data[x, "PV usage [0:1]"], kind = "line")
-    plt.show()
-    '''
+        textErgebnis.insert(END, "\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€")
 
+        #-------------------Plotten der Kurven---------------------------
+
+        plt = data.plot(data["Timestamp", "PV usage [0:1]"])
+        plt.show()
+
+    except:
+        textErgebnis.insert(END, "Es fehlen Werte in der Eingabe\n")
 
     return
 
 
-def leer():
+def save():
     return
 
 def schliessen(event=None):
     root.destroy()
     return
+
+
+def new(event=None):
+    textErgebnis.delete("1.0",END)
+    entryInput.delete(0,END)
+    entryFlaeche.delete(0,END)
+    entryPower.delete(0,END)
+    entryCost.delete(0,END)
+    return
+
+def open(event=None):
+    path = askopenfilename()
+    entryInput.insert(END, path)
+    errmsg = 'Error!'
 
 #-------------Hauptfenster initialisieren------
 
@@ -81,22 +106,33 @@ scrollbar.pack(side=RIGHT, fill=Y)
 frameRechts =Frame(root, width=500, height=100)
 frameLinks =Frame(root, width=500, height=100)
 
-labelDateneingabe= Label(frameLinks, text ="Dateneingabe")
+labelDateneingabe= Label(frameLinks, text ="Dateneingabe:")
 
-labelInput= Label(frameLinks, text = "Name der Input-Datei")
+labelInput= Label(frameLinks, text = "Pfad der Input-Datei")
 entryInput = Entry(frameLinks, width = 20)
 
-labelFlaeche= Label(frameLinks, text="Fläche der Solaranlage")
+labelSolaranlage= Label(frameLinks, text ="Daten Solaranlage:")
+
+labelFlaeche= Label(frameLinks, text="Fläche [m²]")
 entryFlaeche = Entry(frameLinks, width = 20)
+
+labelPower= Label(frameLinks, text="Normalleistung [W/m²]")
+entryPower = Entry(frameLinks, width = 20)
+
+labelCost= Label(frameLinks, text="Investitionskosten [€/m²]")
+entryCost = Entry(frameLinks, width = 20)
+
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=berechnenErsparnis)
 
-textErgebnis = Text(frameRechts, width = 90, height =20, yscrollcommand=scrollbar.set)
+textErgebnis = Text(frameRechts, width = 80, height =20, yscrollcommand=scrollbar.set)
 
 scrollbar.config(command=textErgebnis.yview)
 
 emptyLabel1 = Label(frameLinks, text="")
 emptyLabel2 = Label(frameLinks, text="")
+emptyLabel3 = Label(frameLinks, text="")
+emptyLabel4 = Label(frameLinks, text="")
 
 #-------------Events---------------------------
 
@@ -111,32 +147,39 @@ root.config(menu=mLeiste)
 
 dateiMenu = Menu(mLeiste)
 mLeiste.add_cascade(label="Datei", menu= dateiMenu)
-dateiMenu.add_command(label="Neu", command= leer)
-dateiMenu.add_command(label="Öffnen", command= leer)
-dateiMenu.add_command(label="Speichern", command= leer)
+dateiMenu.add_command(label="Neu", command= new)
+dateiMenu.add_command(label="Öffnen", command= open)
+dateiMenu.add_command(label="Speichern", command= save)
 dateiMenu.add_command(label="Schliessen", command= schliessen, accelerator= "alt + q")
-
-#-------------Untermenu Edit-------------------
-
-editMenu = Menu(mLeiste)
-mLeiste.add_cascade(label="Edit", menu= editMenu)
-editMenu.add_command(label="Rückgängig", command= leer)
-editMenu.add_command(label="Wiederholen", command= leer)
 
 #-------------Widgets platzieren---------------
 
 frameRechts.pack(side = RIGHT)
 frameLinks.pack(side = LEFT)
 
+labelDateneingabe.pack()
+
+emptyLabel1.pack()
+
 labelInput.pack()
 entryInput.pack()
 
-emptyLabel1.pack()
+emptyLabel2.pack()
+
+labelSolaranlage.pack()
+
+emptyLabel3.pack()
 
 labelFlaeche.pack()
 entryFlaeche.pack()
 
-emptyLabel2.pack()
+labelPower.pack()
+entryPower.pack()
+
+labelCost.pack()
+entryCost.pack()
+
+emptyLabel4.pack()
 
 buttonBerechnen.pack(side=BOTTOM)
 
