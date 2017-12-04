@@ -46,6 +46,11 @@ def berechnenErsparnis():
 
         pvCap = roofSpace*normPower# PV Kapazität in Watt, soll nachher auch eingelesen werden
 
+        totalInvest = investCost*(pvCap/1000)
+
+        textErgebnis.insert(END, "Kapazität der PV-Anlage: " + str((pvCap/1000))+" kWp")
+        textErgebnis.insert(END, "\n\n")
+
     except:
         textErgebnis.insert(END, "Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
@@ -56,16 +61,24 @@ def berechnenErsparnis():
     while(i<data.__len__()):
 
         if (((data.iat[i,1])*pvCap)>(data.iat[i,4])): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
-                textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(data.iat[i,0]) + "\n")
-                savings = savings + (((data.iat[i,1])*pvCap)/1000)-((data.iat[i,4])*data.iat[0,3]/1000) # die savings werden um die Einspeisevergütung erhöht
+            textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(data.iat[i,0]) + "\n")
+            savingsMomUe = (((data.iat[i,1])*pvCap)/1000)-((data.iat[i,4])*data.iat[0,3]/1000)
+            savings = savings + savingsMomUe # die savings werden um die Einspeisevergütung erhöht
+            print("momentane Ersparnis: (Ü)" + str(savingsMomUe))
 
         else:
-            savings = savings + ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100) # print durch textErgebnis.insert(), END auswechseln
-            #                (Lastgang [W] * Stromkosten [cent/KWh]/100)- (Lastgang [W]- PV Auslastung * PV Kapazität [W])* Stromkosten [cent/KWh]/100)
-            #                (                  in Euro                                                                         in Euro
-            i=i+1
+            savingsMomN = ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100)
+            #                (Lastgang [W]/1000 * Stromkosten [cent/KWh]/100)- (Lastgang [W]/1000- PV Auslastung * PV Kapazität [W]/1000)* Stromkosten [cent/KWh]/100)
+            #                (           in kW                       in Euro                in kW                                   in kW                      in Euro
+            savings = savings + savingsMomN
 
-    textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€")
+            print("momentane Ersparnis: (N)" + str(savingsMomN))
+
+        print(savings)
+        i=i+1
+
+    textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€\n\n")
+    textErgebnis.insert(END, "Die Amorisationszeit beträgt: " + str(round((totalInvest/(savings/1000)),2)) + " Jahre")
 
     #-------------------Plotten der Kurven---------------------------
 
@@ -124,7 +137,7 @@ entryFlaeche = Entry(frameLinks, width = 20)
 labelPower= Label(frameLinks, text="Normalleistung [W/m²]")
 entryPower = Entry(frameLinks, width = 20)
 
-labelCost= Label(frameLinks, text="Investitionskosten [€/m²]")
+labelCost= Label(frameLinks, text="Investitionskosten [€/kWp]")
 entryCost = Entry(frameLinks, width = 20)
 
 
