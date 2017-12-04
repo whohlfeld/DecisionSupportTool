@@ -6,25 +6,61 @@ import numpy as np
 import pandas as pd
 
 
-
 # ------------------------------------------Variablendeklaration-----------------------------------------------------------
 
-
-# -------------------------------------------Einlesen der CSV---------------------------------------------------------------
-
-
+'''
+pvUtil = data.iat[0,1]# prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
+savings = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
+load = data.iat[0,4]# Lastgang in der betreffenden Stunde
+costNet = data.iat[0,2]# Stromkosten Netz in der betreffenden Stunde
+revPV = data.iat[0,3]# Einspeisevergütung in der betreffenden Stunde
+'''
 
 #----------------------------------------------------------GUI-----------------------------------------------------
 
 #----------------Funktionalität GUI------------
 
-def berechnen():
-    data = pd.read_csv(entryInput.get(), sep=";")
+def berechnenErsparnis():
+
+    # roof = # Dachfläche in Quadratmetern
+
+    # normPower = # Normleistung eines Quadratmeters Solaranlage
+
+    pvCap = 4800# PV Kapazität in Watt, soll nachher auch eingelesen werden
+
+    data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
+
+    textErgebnis.insert(END, data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
+    textErgebnis.insert(END, "\n\n")
+
     i=0
+    savings = 0
     while(i<data.__len__()):
-        textErgebnis.insert(END, data.loc[i, ["Timestamp"]])
+
+
+        if (((data.iat[i,1])*pvCap)>(data.iat[i,4])): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+            textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(data.iat[i,0]) + "\n")
+            savings = savings + (((data.iat[i,1])*pvCap)/1000)-((data.iat[i,4])*data.iat[0,3]/1000) # die savings werden um die Einspeisevergütung erhöht
+
+        else:
+            savings = savings + ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100) # print durch textErgebnis.insert(), END auswechseln
+            #                (Lastgang [W] * Stromkosten [cent/KWh]/100)- (Lastgang [W]- PV Auslastung * PV Kapazität [W])* Stromkosten [cent/KWh]/100)
+            #                (                  in Euro                                                                         in Euro
         i=i+1
+
+    textErgebnis.insert(END, "\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€")
+
+    #-------------------Plotten der Kurven---------------------------
+    '''
+    x = np.linspace(0, 35039,35039)
+
+    plot = data.plot(data[x, "PV usage [0:1]"], kind = "line")
+    plt.show()
+    '''
+
+
     return
+
 
 def leer():
     return
@@ -37,8 +73,6 @@ def schliessen(event=None):
 
 root = Tk()
 root.title("Decision Support Tool")
-
-berechnen()
 
 #-------------Widgets erstellen----------------
 scrollbar = Scrollbar(root)
@@ -55,9 +89,9 @@ entryInput = Entry(frameLinks, width = 20)
 labelFlaeche= Label(frameLinks, text="Fläche der Solaranlage")
 entryFlaeche = Entry(frameLinks, width = 20)
 
-buttonBerechnen = Button(frameLinks,text= "Berechnen", command=berechnen)
+buttonBerechnen = Button(frameLinks,text= "Berechnen", command=berechnenErsparnis)
 
-textErgebnis = Text(frameRechts, width = 70, height =20, yscrollcommand=scrollbar.set)
+textErgebnis = Text(frameRechts, width = 90, height =20, yscrollcommand=scrollbar.set)
 
 scrollbar.config(command=textErgebnis.yview)
 
