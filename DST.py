@@ -69,9 +69,10 @@ def berechnenErsparnis():
 
     #-------------------Plotten der Kurven---------------------------
 
+    '''
     plt = data.plot(data["Timestamp", "PV usage [0:1]"])
     plt.show()
-
+    '''
 
 
     return
