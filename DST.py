@@ -23,9 +23,20 @@ revPV = data.iat[0,3]# Einspeisevergütung in der betreffenden Stunde
 
 def berechnenErsparnis():
 
-    try:
+    textErgebnis.delete("1.0",END)
 
-        textErgebnis.delete(END)
+    try:
+        data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
+
+    except:
+        textErgebnis.insert(END, "Der Dateipfad ist nicht korrekt\n")
+        return
+
+    textErgebnis.insert(END, "Übersicht der eingegebenen Daten:\n\n")
+    textErgebnis.insert(END, data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
+    textErgebnis.insert(END, "\n\n")
+
+    try:
 
         investCost = float(entryCost.get())# investitionskosten pro m²
 
@@ -35,40 +46,33 @@ def berechnenErsparnis():
 
         pvCap = roofSpace*normPower# PV Kapazität in Watt, soll nachher auch eingelesen werden
 
-        try:
-            data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
+    except:
+        textErgebnis.insert(END, "Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
+        return
 
-        except:
-            textErgebnis.insert(END, "Der Dateipfad ist nicht korrekt\n")
+    i=0
+    savings = 0
 
-        textErgebnis.insert(END, data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
-        textErgebnis.insert(END, "\n\n")
+    while(i<data.__len__()):
 
-
-        i=0
-        savings = 0
-        while(i<data.__len__()):
-
-
-            if (((data.iat[i,1])*pvCap)>(data.iat[i,4])): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+        if (((data.iat[i,1])*pvCap)>(data.iat[i,4])): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
                 textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(data.iat[i,0]) + "\n")
                 savings = savings + (((data.iat[i,1])*pvCap)/1000)-((data.iat[i,4])*data.iat[0,3]/1000) # die savings werden um die Einspeisevergütung erhöht
 
-            else:
-                savings = savings + ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100) # print durch textErgebnis.insert(), END auswechseln
-                #                (Lastgang [W] * Stromkosten [cent/KWh]/100)- (Lastgang [W]- PV Auslastung * PV Kapazität [W])* Stromkosten [cent/KWh]/100)
-                #                (                  in Euro                                                                         in Euro
+        else:
+            savings = savings + ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100) # print durch textErgebnis.insert(), END auswechseln
+            #                (Lastgang [W] * Stromkosten [cent/KWh]/100)- (Lastgang [W]- PV Auslastung * PV Kapazität [W])* Stromkosten [cent/KWh]/100)
+            #                (                  in Euro                                                                         in Euro
             i=i+1
 
-        textErgebnis.insert(END, "\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€")
+    textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€")
 
-        #-------------------Plotten der Kurven---------------------------
+    #-------------------Plotten der Kurven---------------------------
 
-        plt = data.plot(data["Timestamp", "PV usage [0:1]"])
-        plt.show()
+    plt = data.plot(data["Timestamp", "PV usage [0:1]"])
+    plt.show()
 
-    except:
-        textErgebnis.insert(END, "Es fehlen Werte in der Eingabe\n")
+
 
     return
 
