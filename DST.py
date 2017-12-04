@@ -7,19 +7,9 @@ import numpy as np
 import pandas as pd
 
 
-# ------------------------------------------Variablendeklaration-----------------------------------------------------------
 
-'''
-pvUtil = data.iat[0,1]# prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
-savings = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
-load = data.iat[0,4]# Lastgang in der betreffenden Stunde
-costNet = data.iat[0,2]# Stromkosten Netz in der betreffenden Stunde
-revPV = data.iat[0,3]# Einspeisevergütung in der betreffenden Stunde
-'''
 
-#----------------------------------------------------------GUI-----------------------------------------------------
-
-#----------------Funktionalität GUI------------
+#----------------------------------Funktionalität GUI-----------------------------------------------------------
 
 def berechnenErsparnis():
 
@@ -38,47 +28,55 @@ def berechnenErsparnis():
 
     try:
 
-        investCost = float(entryCost.get())# investitionskosten pro m²
+        investCost = float(entryCost.get())# [€/kWp] investitionskosten pro kWp
 
-        roofSpace = int(entryFlaeche.get())# Dachfläche in Quadratmetern
+        roofSpace = int(entryFlaeche.get())# [m²] Dachfläche in Quadratmetern
 
-        normPower = float(entryPower.get())# Normleistung eines Quadratmeters Solaranlage
+        normPower = float(entryPower.get())# [W/m²] Normleistung eines Quadratmeters Solaranlage
 
-        pvCap = roofSpace*normPower# PV Kapazität in Watt, soll nachher auch eingelesen werden
+        pvCap = (roofSpace*normPower) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
 
-        totalInvest = investCost*(pvCap/1000)
+        totalInvest = investCost*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
 
-        textErgebnis.insert(END, "Kapazität der PV-Anlage: " + str((pvCap/1000))+" kWp")
+        textErgebnis.insert(END, "Kapazität der PV-Anlage: " + str((pvCap))+" Wp")
         textErgebnis.insert(END, "\n\n")
 
     except:
         textErgebnis.insert(END, "Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
 
-    i=0
-    savings = 0
+    i=0  # Zählvariable für while-schleife
+    savings = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
 
     while(i<data.__len__()):
 
-        if (((data.iat[i,1])*pvCap)>(data.iat[i,4])): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
-            textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(data.iat[i,0]) + "\n")
-            savingsMomUe = (((data.iat[i,1])*pvCap)/1000)-((data.iat[i,4])*data.iat[0,3]/1000)
+        timestamp = data.iat[i,0] # timestamp
+        pvUtil = data.iat[i,1] # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
+        costNet = data.iat[i,2]# [ct/kWh] Stromkosten Netz in der betreffenden Stunde
+        revPV = data.iat[i,3] # [ct/kWh] Einspeisevergütung in der betreffenden Stunde
+        load = data.iat[i,4]  # [W] Lastgang in der betreffenden Stunde
+
+
+        if ((pvUtil*pvCap)>load): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+            textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(timestamp) + "\n")
+            savingsMomUe = (((pvUtil*pvCap)-load)*revPV + load*costNet)/4000 # Netzentgelte werden gespaart und der Nutzer bekommt Einspeisevergütung (4: 15 min; 1000: Wh)
             savings = savings + savingsMomUe # die savings werden um die Einspeisevergütung erhöht
-            print("momentane Ersparnis: (Ü)" + str(savingsMomUe))
+            print("momentane Ersparnis: (Ü)" + str(savingsMomUe)) # zur Überprüfung der Rechnung in der Konsole
 
         else:
-            savingsMomN = ((data.iat[i,4]/1000*data.iat[i,2]/100)-((data.iat[i,4]/1000)-(data.iat[i,1])*pvCap)/1000*data.iat[0,2]/100)
-            #                (Lastgang [W]/1000 * Stromkosten [cent/KWh]/100)- (Lastgang [W]/1000- PV Auslastung * PV Kapazität [W]/1000)* Stromkosten [cent/KWh]/100)
-            #                (           in kW                       in Euro                in kW                                   in kW                      in Euro
+            savingsMomN = ((pvUtil*pvCap)*costNet)/4000 # die Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (4: 15 min; 1000: Wh)
             savings = savings + savingsMomN
 
-            print("momentane Ersparnis: (N)" + str(savingsMomN))
+            print(timestamp + "PV-Output: " + str((pvUtil)*pvCap))+ " Lastgang: " + str(load)
+            print("momentane Ersparnis: (N)" + str(savingsMomN)) # zur Überprüfung der Rechnung in der Konsole
 
-        print(savings)
+        print(savings) # zur Überprüfung der Rechnung in der Konsole
         i=i+1
-
-    textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(savings/1000, 2)) + "€\n\n")
-    textErgebnis.insert(END, "Die Amorisationszeit beträgt: " + str(round((totalInvest/(savings/1000)),2)) + " Jahre")
+    try:
+        textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(savings/100, 2)) + "€\n\n")
+        textErgebnis.insert(END, "Die Amorisationszeit beträgt: " + str(round((totalInvest/(savings/100)),2)) + " Jahre")
+    except:
+        textErgebnis.insert(END, "Die Investition amortisert sich nicht!")
 
     #-------------------Plotten der Kurven---------------------------
 
@@ -112,6 +110,8 @@ def open(event=None):
     entryInput.insert(END, path)
     errmsg = 'Error!'
 
+#----------------------------------------------------------GUI-----------------------------------------------------
+
 #-------------Hauptfenster initialisieren------
 
 root = Tk()
@@ -137,7 +137,7 @@ entryFlaeche = Entry(frameLinks, width = 20)
 labelPower= Label(frameLinks, text="Normalleistung [W/m²]")
 entryPower = Entry(frameLinks, width = 20)
 
-labelCost= Label(frameLinks, text="Investitionskosten [€/kWp]")
+labelCost= Label(frameLinks, text="Investition [€/kWp]")
 entryCost = Entry(frameLinks, width = 20)
 
 
