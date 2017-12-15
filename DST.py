@@ -60,7 +60,9 @@ def berechnung(investCost, roofSpace, normPower, pvCap, data):
 
     return ersparnis
 
-def amortisation(ersparnis, totalInvest):
+
+
+def amortisation(ersparnis, totalInvest): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
 
     amortisationsWert = (totalInvest / (ersparnis / 100))
 
