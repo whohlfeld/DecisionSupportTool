@@ -2,16 +2,83 @@
 
 from Tkinter import *
 from tkFileDialog   import askopenfilename
-import matplotlib as mpl
-import numpy as np
 import pandas as pd
 
+#----------------------------------Variablen---------------------------------------------------------------------
+
+
+investCost = 0# [€/kWp] investitionskosten pro kWp
+
+roofSpace = 0# [m²] Dachfläche in Quadratmetern
+
+normPower = 0 #[W/m²] Normleistung eines Quadratmeters Solaranlage
+
+pvCap = (roofSpace*normPower) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
+
+totalInvest = investCost*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
+
+zinsSatz = 0 # Zins für eine Investition am Kapitalmarkt
 
 
 
-#----------------------------------Funktionalität GUI-----------------------------------------------------------
+#----------------------------------Berechnung--------------------------------------------------------------------
 
-def berechnenErsparnis():
+# berechnet die Ersparnis in cent!
+
+def berechnung(investCost, roofSpace, normPower, pvCap, data):
+
+    i = 0  # Zählvariable für while-schleife
+    ersparnis = 0  # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
+
+    while (i < data.__len__()):
+
+        timestamp = data.iat[i, 0]  # timestamp
+        pvUtil = data.iat[
+            i, 1]  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
+        costNet = data.iat[i, 2]  # [ct/kWh] Stromkosten Netz in der betreffenden Stunde
+        revPV = data.iat[i, 3]  # [ct/kWh] Einspeisevergütung in der betreffenden Stunde
+        load = data.iat[i, 4]  # [W] Lastgang in der betreffenden Stunde
+
+        if ((
+                pvUtil * pvCap) > load):  # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+            textErgebnis.insert(END, "Überkapazität zum Zeitpunkt " + str(timestamp) + "\n")
+            ersparnisMomUe = (((
+                                     pvUtil * pvCap) - load) * revPV + load * costNet) / 4000  # Netzentgelte werden gespaart und der Nutzer bekommt Einspeisevergütung (4: 15 min; 1000: Wh)
+            ersparnis = ersparnis + ersparnisMomUe  # die savings werden um die Einspeisevergütung erhöht
+            print("momentane Ersparnis: (Ü)" + str(ersparnisMomUe))  # zur Überprüfung der Rechnung in der Konsole
+
+        else:
+            ersparnisMomN = ((
+                                   pvUtil * pvCap) * costNet) / 4000  # die Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (4: 15 min; 1000: Wh)
+            ersparnis = ersparnis + ersparnisMomN
+
+            print(timestamp + "PV-Output: " + str((pvUtil) * pvCap)) + " Lastgang: " + str(load)
+            print("momentane Ersparnis: (N)" + str(ersparnisMomN))  # zur Überprüfung der Rechnung in der Konsole
+
+        print(ersparnis)  # zur Überprüfung der Rechnung in der Konsole
+        i = i + 1
+
+    return ersparnis
+
+def amortisation(ersparnis, totalInvest):
+
+    amortisationsWert = (totalInvest / (ersparnis / 100))
+
+    return amortisationsWert
+
+
+#----------------------------------Plotten ---------------------------------------------------------------------
+
+def plot():
+    '''
+    plt = data.plot(data["Timestamp", "PV usage [0:1]"])
+    plt.show()
+    '''
+    return
+
+#----------------------------------Funktionalität GUI -----------------------------------------------------------
+
+def einlesenAusgeben():
 
     textErgebnis.delete("1.0",END)
 
@@ -45,45 +112,21 @@ def berechnenErsparnis():
         textErgebnis.insert(END, "Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
 
-    i=0  # Zählvariable für while-schleife
-    savings = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
-
-    while(i<data.__len__()):
-
-        timestamp = data.iat[i,0] # timestamp
-        pvUtil = data.iat[i,1] # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
-        costNet = data.iat[i,2]# [ct/kWh] Stromkosten Netz in der betreffenden Stunde
-        revPV = data.iat[i,3] # [ct/kWh] Einspeisevergütung in der betreffenden Stunde
-        load = data.iat[i,4]  # [W] Lastgang in der betreffenden Stunde
+        ersparnis = berechnung(investCost, roofSpace, normPower, pvCap, data)
 
 
-        if ((pvUtil*pvCap)>load): # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
-            textErgebnis.insert(END,"Überkapazität zum Zeitpunkt " + str(timestamp) + "\n")
-            savingsMomUe = (((pvUtil*pvCap)-load)*revPV + load*costNet)/4000 # Netzentgelte werden gespaart und der Nutzer bekommt Einspeisevergütung (4: 15 min; 1000: Wh)
-            savings = savings + savingsMomUe # die savings werden um die Einspeisevergütung erhöht
-            print("momentane Ersparnis: (Ü)" + str(savingsMomUe)) # zur Überprüfung der Rechnung in der Konsole
+    textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(ersparnis / 100, 2)) + "€\n\n")
 
-        else:
-            savingsMomN = ((pvUtil*pvCap)*costNet)/4000 # die Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (4: 15 min; 1000: Wh)
-            savings = savings + savingsMomN
+    textErgebnis.insert(END, "Die Amorisationszeit beträgt: " + str(round(amortisation(ersparnis, totalInvest), 2)) + " Jahre")
 
-            print(timestamp + "PV-Output: " + str((pvUtil)*pvCap))+ " Lastgang: " + str(load)
-            print("momentane Ersparnis: (N)" + str(savingsMomN)) # zur Überprüfung der Rechnung in der Konsole
 
-        print(savings) # zur Überprüfung der Rechnung in der Konsole
-        i=i+1
-    try:
-        textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(savings/100, 2)) + "€\n\n")
-        textErgebnis.insert(END, "Die Amorisationszeit beträgt: " + str(round((totalInvest/(savings/100)),2)) + " Jahre")
-    except:
-        textErgebnis.insert(END, "Die Investition amortisert sich nicht!")
 
     #-------------------Plotten der Kurven---------------------------
 
-    '''
-    plt = data.plot(data["Timestamp", "PV usage [0:1]"])
-    plt.show()
-    '''
+    try:
+        plot(data)
+    except:
+        print("Kein Plot möglich")
 
 
     return
@@ -110,7 +153,12 @@ def open(event=None):
     entryInput.insert(END, path)
     errmsg = 'Error!'
 
+
+
+
 #----------------------------------------------------------GUI-----------------------------------------------------
+
+
 
 #-------------Hauptfenster initialisieren------
 
@@ -141,7 +189,7 @@ labelCost= Label(frameLinks, text="Investition [€/kWp]")
 entryCost = Entry(frameLinks, width = 20)
 
 
-buttonBerechnen = Button(frameLinks,text= "Berechnen", command=berechnenErsparnis)
+buttonBerechnen = Button(frameLinks,text= "Berechnen", command=einlesenAusgeben)
 
 textErgebnis = Text(frameRechts, width = 80, height =20, yscrollcommand=scrollbar.set)
 
