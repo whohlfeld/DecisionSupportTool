@@ -1,6 +1,8 @@
 # This Python file uses the following encoding: utf-8
 
 from Tkinter import *
+from threading import Thread
+from time import sleep
 from tkFileDialog   import askopenfilename
 import pandas as pd
 
@@ -33,29 +35,25 @@ def berechnung(investCost, roofSpace, normPower, pvCap, data):
     while (i < data.__len__()):
 
         timestamp = data.iat[i, 0]  # timestamp
-        pvUtil = data.iat[
-            i, 1]  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
+        pvUtil = data.iat[i, 1]  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
         costNet = data.iat[i, 2]  # [ct/kWh] Stromkosten Netz in der betreffenden Stunde
         revPV = data.iat[i, 3]  # [ct/kWh] Einspeisevergütung in der betreffenden Stunde
         load = data.iat[i, 4]  # [W] Lastgang in der betreffenden Stunde
 
-        if ((
-                pvUtil * pvCap) > load):  # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
-            textErgebnis.insert(END, "Überkapazität zum Zeitpunkt " + str(timestamp) + "\n")
-            ersparnisMomUe = (((
-                                     pvUtil * pvCap) - load) * revPV + load * costNet) / 4000  # Netzentgelte werden gespaart und der Nutzer bekommt Einspeisevergütung (4: 15 min; 1000: Wh)
+        if ((pvUtil * pvCap) > load):  # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+            print("Überkapazität zum Zeitpunkt " + str(timestamp) + "\n")
+            ersparnisMomUe = (((pvUtil * pvCap) - load) * revPV + load * costNet) / 4000  # Netzentgelte werden gespaart und der Nutzer bekommt Einspeisevergütung (4: 15 min; 1000: Wh)
             ersparnis = ersparnis + ersparnisMomUe  # die savings werden um die Einspeisevergütung erhöht
             print("momentane Ersparnis: (Ü)" + str(ersparnisMomUe))  # zur Überprüfung der Rechnung in der Konsole
 
         else:
-            ersparnisMomN = ((
-                                   pvUtil * pvCap) * costNet) / 4000  # die Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (4: 15 min; 1000: Wh)
+            ersparnisMomN = ((pvUtil * pvCap) * costNet) / 4000  # die Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (4: 15 min; 1000: Wh)
             ersparnis = ersparnis + ersparnisMomN
 
             print(timestamp + "PV-Output: " + str((pvUtil) * pvCap)) + " Lastgang: " + str(load)
             print("momentane Ersparnis: (N)" + str(ersparnisMomN))  # zur Überprüfung der Rechnung in der Konsole
 
-        print(ersparnis)  # zur Überprüfung der Rechnung in der Konsole
+        print("Gesamtersparnis: " + str(ersparnis))  # zur Überprüfung der Rechnung in der Konsole
         i = i + 1
 
     return ersparnis
@@ -68,6 +66,17 @@ def amortisation(ersparnis, totalInvest): # amortisation mit Kapitalwertmethode/
 
     return amortisationsWert
 
+'''
+def ersparnisThread():
+    thread = Thread(target=berechnung, args=(investCost, roofSpace, normPower, pvCap, data))
+    thread.start()
+    textErgebnis.insert(END, "Processing...")
+    while (thread.is_alive()):
+        sleep(0.5)
+        textErgebnis.update()
+        textErgebnis.insert(END, ".")
+    return thread
+'''
 
 #----------------------------------Plotten ---------------------------------------------------------------------
 
@@ -110,17 +119,33 @@ def einlesenAusgeben():
         textErgebnis.insert(END, "Kapazität der PV-Anlage: " + str((pvCap))+" Wp")
         textErgebnis.insert(END, "\n\n")
 
+        ersparnis = berechnung(investCost, roofSpace, normPower, pvCap, data)
+
     except:
         textErgebnis.insert(END, "Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
 
-        ersparnis = berechnung(investCost, roofSpace, normPower, pvCap, data)
-
 
     textErgebnis.insert(END, "\nBerechnung Erfolgreich:\n\nDie jährliche Ersparnis beträgt: " + str(round(ersparnis / 100, 2)) + "€\n\n")
 
-    textErgebnis.insert(END, "Die Amorisationszeit beträgt: " + str(round(amortisation(ersparnis, totalInvest), 2)) + " Jahre")
+    textErgebnis.insert(END, "Die Amortisationszeit beträgt: " + str(round(amortisation(ersparnis, totalInvest), 2)) + " Jahre \n")
 
+
+    # weitere Flächengrössen berechnen
+    spaces = [roofSpace - 3, roofSpace - 2, roofSpace - 1, roofSpace + 1, roofSpace + 2,roofSpace + 3] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
+    faktor = [1.5,1.3,1.1,0.9,0.7,0.5] #faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
+
+
+    for xRoofspace in spaces:
+
+
+        ersparnis = berechnung(investCost, xRoofspace, normPower, xRoofspace*normPower, data)
+
+        totalInvest = investCost*faktor[spaces.index(xRoofspace)]*(xRoofspace*normPower)/1000 # neue totale Investitionskosten berechnen
+
+        textErgebnis.insert(END, "\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(ersparnis / 100, 2)) + "€\n\n")
+
+        textErgebnis.insert(END, "Die Amortisationszeit beträgt dann: " + str(round(amortisation(ersparnis, totalInvest), 2)) + " Jahre\n")
 
 
     #-------------------Plotten der Kurven---------------------------
