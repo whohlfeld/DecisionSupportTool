@@ -138,7 +138,6 @@ def einlesenAusgeben():
 
     for xRoofspace in spaces:
 
-
         ersparnis = berechnung(investCost, xRoofspace, normPower, xRoofspace*normPower, data)
 
         totalInvest = investCost*faktor[spaces.index(xRoofspace)]*(xRoofspace*normPower)/1000 # neue totale Investitionskosten berechnen
@@ -154,7 +153,6 @@ def einlesenAusgeben():
         plot(data)
     except:
         print("Kein Plot möglich")
-
 
     return
 
