@@ -13,8 +13,8 @@ import numpy as np
 To Do:
 
 - Alle Methoden müssen noch einen Dokumentations-string bekommen
-- Leistungspreis einlesen aus Excel
--  einlesenAusgeben und berechnen verschlanken (auslagern)
+- Leistungspreis Demodaten wo einer anfallen würde
+- Abschreibung mit Kapitalwertmethode
 
 '''
 
@@ -24,27 +24,7 @@ To Do:
 
 def berechnung(pvCap, data):
 
-    ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
-
-    '''muss noch aus excfel eingelesen werden data.iat[1,5]'''
-
-    leistungspreis =  5.5 # Leistungspreis in €/kW
-
-    maxNachfrage = 0
-
-    j = 0  # Zählvariable für while-schleife
-
-    while (j < data.__len__()):
-        vergleichsWert = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
-        if vergleichsWert > maxNachfrage:
-            maxNachfrage = vergleichsWert
-        j += 1
-
-    if maxNachfrage < data["Lastgang_[W]"].max():
-        leistungspreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000* leistungspreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
-        ersparnis = leistungspreisErsparnis
-    else:
-        leistungspreisErsparnis = 0
+    ersparnis, leistungsPreisErsparnis = berechnungLeistungsPreisErsparnis(pvCap, data)
 
     i = 0  # Zählvariable für while-schleife
 
@@ -72,8 +52,33 @@ def berechnung(pvCap, data):
         print("Gesamtersparnis: "+ str(ersparnis))  # zur Überprüfung der Rechnung in der Konsole
         i += 1
 
-    return (ersparnis, leistungspreisErsparnis)
+    return (ersparnis, leistungsPreisErsparnis)
 
+
+
+def berechnungLeistungsPreisErsparnis(pvCap, data):
+
+    ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
+
+    leistungspreis =  float(data.iat[1,5]) # Leistungspreis in €/kW
+
+    maxNachfrage = 0
+
+    j = 0  # Zählvariable für while-schleife
+
+    while (j < data.__len__()):
+        vergleichsWert = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
+        if vergleichsWert > maxNachfrage:
+            maxNachfrage = vergleichsWert
+        j += 1
+
+    if maxNachfrage < data["Lastgang_[W]"].max():
+        leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000* leistungspreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
+        ersparnis = leistungsPreisErsparnis
+    else:
+        leistungsPreisErsparnis = 0
+
+    return ersparnis, leistungsPreisErsparnis
 
 
 def amortisation(ersparnis, totalInvest): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
@@ -100,7 +105,8 @@ def plot():
     '''
     return
 
-#----------------------------------Funktionalität GUI -----------------------------------------------------------
+
+#----------------------------------Funktionalität ----------------------------------------------------------
 
 def einlesenAusgeben():
 
@@ -134,7 +140,8 @@ def einlesenAusgeben():
         ausgabeText("\n\n")
         ausgabeText("Berechnung... \n")
 
-        ersparnis, leistungsErsparnis = berechnung(pvCap, data)
+
+        ersparnis, leistungsPreisErsparnis = berechnung(pvCap, data)
 
 
     except:
@@ -142,9 +149,9 @@ def einlesenAusgeben():
         return
 
 
-    gesamtErsparnis = ersparnis + leistungsErsparnis
+    gesamtErsparnis = ersparnis + leistungsPreisErsparnis
 
-    ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
+    ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
     ausgabeText("\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
 
@@ -152,7 +159,7 @@ def einlesenAusgeben():
 
     ausgabeText("\nAlternativen:\n")
 
-    textErgebnis.see("end")
+    endeAnzeigen()
 
 
     # weitere Flächengrössen berechnen
@@ -162,15 +169,15 @@ def einlesenAusgeben():
 
     for xRoofspace in spaces:
 
-        ersparnis, leistungsErsparnis = berechnung(xRoofspace*normLeistung, data)
+        ersparnis, leistungsPreisErsparnis = berechnung(xRoofspace*normLeistung, data)
 
-        gesamtErsparnis = ersparnis + leistungsErsparnis
+        gesamtErsparnis = ersparnis + leistungsPreisErsparnis
 
         gesamtInvest = investKosten*faktor[spaces.index(xRoofspace)]*(xRoofspace*normLeistung)/1000 # neue totale Investitionskosten berechnen
 
         ausgabeText("\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
 
-        ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
+        ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
         ausgabeText("Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre\n")
 
@@ -191,9 +198,6 @@ def einlesenAusgeben():
 
 
 #-----------------Lesen/schreiben GUI----------
-
-'''Hier muss die gesamte ein und ausgabe der GUI hin, welche jetzt noch mit der berechnung verknüpft ist - bsp aufruf von ein- und ausgabe-Methoden'''
-
 
 #------einlesen---------
 
