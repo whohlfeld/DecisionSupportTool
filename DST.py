@@ -10,23 +10,11 @@ import numpy as np
 #----------------------------------Variablen---------------------------------------------------------------------
 
 
-investCost = 0# [€/kWp] investitionskosten pro kWp
-
-roofSpace = 0# [m²] Dachfläche in Quadratmetern
-
-normPower = 0 #[W/m²] Normleistung eines Quadratmeters Solaranlage
-
-pvCap = (roofSpace*normPower) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
-
-totalInvest = investCost*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
-
-
-
 #----------------------------------Berechnung--------------------------------------------------------------------
 
 # berechnet die Ersparnis in cent!
 
-def berechnung(investCost, roofSpace, normPower, pvCap, data):
+def berechnung(pvCap, data):
 
     ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
 
@@ -44,13 +32,11 @@ def berechnung(investCost, roofSpace, normPower, pvCap, data):
             maxNachfrage = vergleichsWert
         j += 1
 
-    if maxNachfrage < data["Lastgang_[W]"].max:
+    if maxNachfrage < data["Lastgang_[W]"].max():
         leistungspreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000* leistungspreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
         ersparnis = leistungspreisErsparnis
     else:
         leistungspreisErsparnis = 0
-
-
 
     i = 0  # Zählvariable für while-schleife
 
@@ -110,78 +96,77 @@ def plot():
 
 def einlesenAusgeben():
 
-    textErgebnis.delete("1.0",END)
+    loeschenText() # löscht die Daten im Textfeld der GUI
 
     try:
         data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
 
     except:
-        textErgebnis.insert(END, "Der Dateipfad ist nicht korrekt\n")
+        ausgabeText("Der Dateipfad ist nicht korrekt\n")
         return
 
-    textErgebnis.insert(END, "Übersicht der eingegebenen Daten:\n\n")
-    textErgebnis.insert(END, data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
-    textErgebnis.insert(END, "\n\n")
+    ausgabeText("Übersicht der eingegebenen Daten:\n\n")
+    ausgabeText(data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
+    ausgabeText("\n\n")
 
 
-    '''try'''
+    try:
 
-    investCost = float(entryCost.get())# [€/kWp] investitionskosten pro kWp
+        investKosten = float(einlesenKosten())# [€/kWp] investitionskosten pro kWp
 
-    roofSpace = int(entryFlaeche.get())# [m²] Dachfläche in Quadratmetern
+        dachFlaeche = int(einlesenFlaeche())# [m²] Dachfläche in Quadratmetern
 
-    normPower = float(entryPower.get())# [W/m²] Normleistung eines Quadratmeters Solaranlage
+        normLeistung = float(einlesenLeistung())# [W/m²] Normleistung eines Quadratmeters Solaranlage
 
-    pvCap = (roofSpace*normPower) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
+        pvCap = (dachFlaeche*normLeistung) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
 
-    totalInvest = investCost*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
+        gesamtInvest = investKosten*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
 
-    textErgebnis.insert(END, "Kapazität der PV-Anlage: " + str((pvCap))+" Wp")
-    textErgebnis.insert(END, "\n\n")
+        ausgabeText("Kapazität der PV-Anlage: " + str((pvCap))+" Wp")
+        ausgabeText("\n\n")
+        ausgabeText("Berechnung... \n")
 
-    textErgebnis.insert(END, "Berechnung... \n")
-
-    ersparnis, leistungsErsparnis = berechnung(investCost, roofSpace, normPower, pvCap, data)
+        ersparnis, leistungsErsparnis = berechnung(pvCap, data)
 
 
-    '''except:
-        textErgebnis.insert(END, "Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
+    except:
+        ausgabeText("Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
-    '''
+
 
     gesamtErsparnis = ersparnis + leistungsErsparnis
 
-    textErgebnis.insert(END, "\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
+    ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
 
-    textErgebnis.insert(END, "\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
+    ausgabeText("\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
 
-    textErgebnis.insert(END, "Die Amortisationszeit beträgt: " + str(round(amortisation(gesamtErsparnis, totalInvest), 2)) + " Jahre \n")
+    ausgabeText("Die Amortisationszeit beträgt: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre \n")
 
-    textErgebnis.insert(END, "\nAlternativen:\n")
+    ausgabeText("\nAlternativen:\n")
 
     textErgebnis.see("end")
 
 
     # weitere Flächengrössen berechnen
-    spaces = [roofSpace - 3, roofSpace - 2, roofSpace - 1, roofSpace + 1, roofSpace + 2,roofSpace + 3] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
+    spaces = [dachFlaeche - 3, dachFlaeche - 2, dachFlaeche - 1, dachFlaeche + 1, dachFlaeche + 2,dachFlaeche + 3] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
     faktor = [1.5,1.3,1.1,0.9,0.7,0.5] #faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
 
 
     for xRoofspace in spaces:
 
-        ersparnis, leistungsErsparnis = berechnung(investCost, xRoofspace, normPower, xRoofspace*normPower, data)
+        ersparnis, leistungsErsparnis = berechnung(xRoofspace*normLeistung, data)
 
         gesamtErsparnis = ersparnis + leistungsErsparnis
 
-        totalInvest = investCost*faktor[spaces.index(xRoofspace)]*(xRoofspace*normPower)/1000 # neue totale Investitionskosten berechnen
+        gesamtInvest = investKosten*faktor[spaces.index(xRoofspace)]*(xRoofspace*normLeistung)/1000 # neue totale Investitionskosten berechnen
 
-        textErgebnis.insert(END, "\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
+        ausgabeText("\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
 
-        textErgebnis.insert(END, "\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
+        ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
 
-        textErgebnis.insert(END, "Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, totalInvest), 2)) + " Jahre\n")
+        ausgabeText("Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre\n")
 
-        textErgebnis.see("end")
+        endeAnzeigen()
 
     #-------------------Plotten der Kurven---------------------------
 
@@ -192,6 +177,42 @@ def einlesenAusgeben():
 
     return
 
+
+
+#------------------------------------GUI (Darstellung)---------------------------------------------------------
+
+
+#-----------------Lesen/schreiben GUI----------
+
+'''Hier muss die gesamte ein und ausgabe der GUI hin, welche jetzt noch mit der berechnung verknüpft ist - bsp aufruf von ein- und ausgabe-Methoden'''
+
+
+#------einlesen---------
+
+def einlesenKosten():
+    return entryCost.get()
+
+def einlesenFlaeche():
+    return entryFlaeche.get()
+
+def einlesenLeistung():
+    return entryPower.get()
+
+#-----ausgeben-----------
+
+def ausgabeText(string): #gibt Text im Textfeld aus
+    textErgebnis.insert(END, string)
+    return
+
+def loeschenText(): #löscht den Text im Textfeld
+    textErgebnis.delete("1.0", END)
+    return
+
+def endeAnzeigen(): #scrollt zum Ende des Textfeldes
+    textErgebnis.see("end")
+    return
+
+#-----------------Funktionen GUI-Menü---------
 
 def save():
     return
@@ -213,13 +234,6 @@ def open(event=None):
     path = askopenfilename()
     entryInput.insert(END, path)
     errmsg = 'Error!'
-
-
-
-
-#----------------------------------------------------------GUI-----------------------------------------------------
-
-
 
 #-------------Hauptfenster initialisieren------
 
