@@ -9,6 +9,14 @@ import numpy as np
 
 #----------------------------------Variablen---------------------------------------------------------------------
 
+'''
+To Do:
+
+- Alle Methoden müssen noch einen Dokumentations-string bekommen
+- Leistungspreis einlesen aus Excel
+-  einlesenAusgeben und berechnen verschlanken (auslagern)
+
+'''
 
 #----------------------------------Berechnung--------------------------------------------------------------------
 
