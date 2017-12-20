@@ -99,7 +99,7 @@ def einlesenAusgeben():
     loeschenText() # löscht die Daten im Textfeld der GUI
 
     try:
-        data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
+        data = pd.read_csv(eingabeDatei.get(), sep=";")  # Daten werden aus CSV eingelesen
 
     except:
         ausgabeText("Der Dateipfad ist nicht korrekt\n")
@@ -190,13 +190,13 @@ def einlesenAusgeben():
 #------einlesen---------
 
 def einlesenKosten():
-    return entryCost.get()
+    return eingabeKosten.get()
 
 def einlesenFlaeche():
-    return entryFlaeche.get()
+    return eingabeFlaeche.get()
 
 def einlesenLeistung():
-    return entryPower.get()
+    return eingabeLeistung.get()
 
 #-----ausgeben-----------
 
@@ -224,15 +224,15 @@ def schliessen(event=None):
 
 def new(event=None):
     textErgebnis.delete("1.0",END)
-    entryInput.delete(0,END)
-    entryFlaeche.delete(0,END)
-    entryPower.delete(0,END)
-    entryCost.delete(0,END)
+    eingabeDatei.delete(0, END)
+    eingabeFlaeche.delete(0, END)
+    eingabeLeistung.delete(0, END)
+    eingabeKosten.delete(0, END)
     return
 
 def open(event=None):
     path = askopenfilename()
-    entryInput.insert(END, path)
+    eingabeDatei.insert(END, path)
     errmsg = 'Error!'
 
 #-------------Hauptfenster initialisieren------
@@ -250,18 +250,18 @@ frameLinks =Frame(root, width=500, height=100)
 labelDateneingabe= Label(frameLinks, text ="Dateneingabe:")
 
 labelInput= Label(frameLinks, text = "Pfad der Input-Datei")
-entryInput = Entry(frameLinks, width = 20)
+eingabeDatei = Entry(frameLinks, width = 20)
 
 labelSolaranlage= Label(frameLinks, text ="Daten Solaranlage:")
 
 labelFlaeche= Label(frameLinks, text="Fläche [m²]")
-entryFlaeche = Entry(frameLinks, width = 20)
+eingabeFlaeche = Entry(frameLinks, width = 20)
 
-labelPower= Label(frameLinks, text="Normalleistung [W/m²]")
-entryPower = Entry(frameLinks, width = 20)
+labelLeistung= Label(frameLinks, text="Normalleistung [W/m²]")
+eingabeLeistung = Entry(frameLinks, width = 20)
 
-labelCost= Label(frameLinks, text="Investition [€/kWp]")
-entryCost = Entry(frameLinks, width = 20)
+labelKosten= Label(frameLinks, text="Investition [€/kWp]")
+eingabeKosten = Entry(frameLinks, width = 20)
 
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=rechenThread)
@@ -303,7 +303,7 @@ labelDateneingabe.pack()
 emptyLabel1.pack()
 
 labelInput.pack()
-entryInput.pack()
+eingabeDatei.pack()
 
 emptyLabel2.pack()
 
@@ -312,13 +312,13 @@ labelSolaranlage.pack()
 emptyLabel3.pack()
 
 labelFlaeche.pack()
-entryFlaeche.pack()
+eingabeFlaeche.pack()
 
-labelPower.pack()
-entryPower.pack()
+labelLeistung.pack()
+eingabeLeistung.pack()
 
-labelCost.pack()
-entryCost.pack()
+labelKosten.pack()
+eingabeKosten.pack()
 
 emptyLabel4.pack()
 
