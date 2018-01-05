@@ -3,7 +3,7 @@
 from Tkinter import *
 from threading import Thread
 from time import sleep
-from tkFileDialog   import askopenfilename
+from tkFileDialog import askopenfilename
 import pandas as pd
 import numpy as np
 
@@ -13,9 +13,10 @@ import numpy as np
 To Do:
 
 - Alle Methoden müssen noch einen Dokumentations-string bekommen
-- Leistungspreis Demodaten wo einer anfallen würde
-- Abschreibung mit Kapitalwertmethode
-- Einheiten!!! (100, 1000 teilungen nerven)
+- Leistungspreis: Demodaten wo einer anfallen würde
+- Abschreibungsmethodik fertigstellen
+- Einheiten!!! (100, 1000 Teilungen nerven)
+- Investitionsentscheidung nach Kapitalewert sinnvoller als Amortisation!
 
 '''
 
