@@ -56,23 +56,23 @@ def berechnung(pvCap, data):
 
 
 
-def berechnungLeistungsPreisErsparnis(pvCap, data):
+def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistungsspitze gekappt wird, dann spart man, falls nicht , dann nicht
 
     ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
 
-    leistungspreis =  float(data.iat[1,5]) # Leistungspreis in €/kW
+    leistungspreis =  float(data.iat[1,5]) # Leistungspreis in €/kW aus Excel
 
     maxNachfrage = 0
 
     j = 0  # Zählvariable für while-schleife
 
-    while (j < data.__len__()):
+    while (j < data.__len__()): # Ermittlung der maximalen Stromnachfrage unter Berücksichtigung der PV Nutzung
         vergleichsWert = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
         if vergleichsWert > maxNachfrage:
             maxNachfrage = vergleichsWert
         j += 1
 
-    if maxNachfrage < data["Lastgang_[W]"].max():
+    if maxNachfrage < data["Lastgang_[W]"].max(): # falls sich die Lastspitze durch die PV Nutzung verringert hat - Einsparung
         leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000* leistungspreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
         ersparnis = leistungsPreisErsparnis
     else:
@@ -83,9 +83,18 @@ def berechnungLeistungsPreisErsparnis(pvCap, data):
 
 def amortisation(ersparnis, totalInvest): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
 
-    amortisationsWert = (totalInvest / (ersparnis / 100))
+    r = 0.05 # zinssatz, eingelesen aus Excel
+    einnahmen = 0
+    amortisationsJahre = 0
 
-    return amortisationsWert
+    while (totalInvest>einnahmen):
+        einnahmen = einnahmen + (ersparnis/((1+r)**amortisationsJahre))
+        amortisationsJahre = amortisationsJahre + 1
+
+    '''amortisationsWert = (totalInvest / (ersparnis / 100)) # könnte diese Dauer berechnen und dann in einer weiteren Rechnung die
+    '''                                                      # Rückzahlungen mit (i+1)^t abzinsen -> Kapitalwert?
+
+    return amortisationsJahre
 
 
 def rechenThread():
@@ -138,7 +147,7 @@ def einlesenAusgeben():
 
         ausgabeText("Kapazität der PV-Anlage: " + str((pvCap))+" Wp")
         ausgabeText("\n\n")
-        ausgabeText("Berechnung... \n")
+        ausgabeText("Berechnung: \n")
 
 
         ersparnis, leistungsPreisErsparnis = berechnung(pvCap, data)
@@ -151,11 +160,15 @@ def einlesenAusgeben():
 
     gesamtErsparnis = ersparnis + leistungsPreisErsparnis
 
-    ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
+    ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n")
 
     ausgabeText("\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
 
     ausgabeText("Die Amortisationszeit beträgt: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre \n")
+
+    ausgabeText("\nFür Gesamtinvest: " + str(gesamtInvest) + "€\n\n")
+
+    ausgabeText("\n------------------------------------------------------------------------\n")
 
     ausgabeText("\nAlternativen:\n")
 
@@ -164,7 +177,7 @@ def einlesenAusgeben():
 
     # weitere Flächengrössen berechnen
     spaces = [dachFlaeche - 3, dachFlaeche - 2, dachFlaeche - 1, dachFlaeche + 1, dachFlaeche + 2,dachFlaeche + 3] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
-    faktor = [1.5,1.3,1.1,0.9,0.7,0.5] #faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
+    faktor = [1.5,1.3,1.1,0.9,0.7,0.5] # faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
 
 
     for xRoofspace in spaces:
@@ -175,11 +188,13 @@ def einlesenAusgeben():
 
         gesamtInvest = investKosten*faktor[spaces.index(xRoofspace)]*(xRoofspace*normLeistung)/1000 # neue totale Investitionskosten berechnen
 
-        ausgabeText("\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
+        ausgabeText("\n\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis / 100, 2)) + "€\n")
 
         ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
         ausgabeText("Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre\n")
+
+        ausgabeText("\nFür Gesamtinvest: " + str(gesamtInvest) + "€\n\n")
 
         endeAnzeigen()
 
