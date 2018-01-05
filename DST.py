@@ -15,6 +15,7 @@ To Do:
 - Alle Methoden müssen noch einen Dokumentations-string bekommen
 - Leistungspreis Demodaten wo einer anfallen würde
 - Abschreibung mit Kapitalwertmethode
+- Einheiten!!! (100, 1000 teilungen nerven)
 
 '''
 
@@ -81,19 +82,18 @@ def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistung
     return ersparnis, leistungsPreisErsparnis
 
 
-def amortisation(ersparnis, totalInvest): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
+def amortisation(gesamtErsparnis, gesamtInvest): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
 
     r = 0.05 # zinssatz, eingelesen aus Excel
     einnahmen = 0
     amortisationsJahre = 0
 
-    while (totalInvest>einnahmen):
-        einnahmen = einnahmen + (ersparnis/((1+r)**amortisationsJahre))
+    while (gesamtInvest>einnahmen):
+        einnahmen = einnahmen + ((gesamtErsparnis/100)/((1+r)**amortisationsJahre))
         amortisationsJahre = amortisationsJahre + 1
 
     '''amortisationsWert = (totalInvest / (ersparnis / 100)) # könnte diese Dauer berechnen und dann in einer weiteren Rechnung die
     '''                                                      # Rückzahlungen mit (i+1)^t abzinsen -> Kapitalwert?
-
     return amortisationsJahre
 
 
