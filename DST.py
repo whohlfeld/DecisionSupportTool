@@ -19,6 +19,7 @@ To Do:
 - Woher kamen die PV Daten ?
 - Ist das Einlesen der Daten so ok? - Preis könnte fluktuieren in Excel.
 - Faktoren bei verschiedenen Flächen - macht das Sinn? - Installationskosten?? https://www.rechnerphotovoltaik.de/
+- Ausarbeitung der Ergebnisse - Gebäude vergleichen? Reichen 2-3 Beispiele (PV-Anlagen unterschiedlich!)
 
 '''
 
@@ -38,7 +39,7 @@ def berechnung(pvCap, data):
         pvUtil = float(data.iat[i, 1])  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
         costNet = float(data.iat[i, 2])/100  # [€/kWh] Stromkosten Netz in der betreffenden Stunde
         revPV = float(data.iat[i, 3])/100  # [€/kWh] Einspeisevergütung in der betreffenden Stunde
-        load = float(data.iat[i, 4])/1000  # [kW] Lastgang in der betreffenden Stunde
+        load = float(data.iat[i, 4])  # [kW] Lastgang in der betreffenden Stunde
 
         if ((pvUtil * pvCap) > load):  # falls mehr Solarstrom produziert wird, als Last anfällt, speise Strom ein, erhalte Entgelt
             ersparnisMomUe = (((pvUtil * pvCap) - load) * revPV + load * costNet) / 4 # in € - Netzentgelte werden gespart und der Nutzer bekommt Einspeisevergütung (durch 4: 15 min)
@@ -111,6 +112,30 @@ def rechenThread():
         textErgebnis.insert(END, ".")
     return
 
+def uebersicht():
+    loeschenText()  # löscht die Daten im Textfeld der GUI
+
+    try:
+        data = pd.read_csv(eingabeDatei.get(), sep=";")  # Daten werden aus CSV eingelesen
+
+    except:
+        ausgabeText("Der Dateipfad ist nicht korrekt")
+        return
+
+    ausgabeText("Übersicht der eingegebenen Daten:\n\n")
+    ausgabeText(data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
+    ausgabeText("\n\n")
+
+    panelFlaeche = int(einlesenFlaeche())  # [m²] Dachfläche in Quadratmetern
+
+    normLeistung = float(einlesenLeistung()) / 1000  # [kW/m²] Normleistung eines Quadratmeters Solaranlage
+
+    pvCap = (panelFlaeche * normLeistung)  # [m²*kW/m²] = [kW] PV Kapazität in Kilowatt
+
+    ausgabeText("Kapazität der PV-Anlage: " + str((pvCap)) + " kW\n\n")
+
+    return
+
 #----------------------------------Plotten ---------------------------------------------------------------------
 
 def plot(data):
@@ -133,10 +158,6 @@ def einlesenAusgeben():
     except:
         ausgabeText("Der Dateipfad ist nicht korrekt")
         return
-
-    ausgabeText("Übersicht der eingegebenen Daten:\n\n")
-    ausgabeText(data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
-    ausgabeText("\n\n")
 
 
     try:
@@ -299,6 +320,7 @@ eingabeKostenAufbau = Entry(frameLinks, width = 20)
 
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=rechenThread)
+buttonUebersicht = Button(frameLinks,text= "Übersicht", command=uebersicht)
 
 textErgebnis = Text(frameRechts, width = 80, height =22, yscrollcommand=scrollbar.set)
 
@@ -360,7 +382,8 @@ eingabeKostenAufbau.pack()
 
 emptyLabel4.pack()
 
-buttonBerechnen.pack()
+buttonBerechnen.pack(side=RIGHT)
+buttonUebersicht.pack(side=LEFT)
 
 textErgebnis.pack()
 
