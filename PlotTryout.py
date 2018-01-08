@@ -5,7 +5,7 @@ from threading import Thread
 from time import sleep
 from tkFileDialog import askopenfilename
 import pandas as pd
-import matplotlib.pyplot as pt
+import numpy as np
 
 #----------------------------------Variablen---------------------------------------------------------------------
 
@@ -13,12 +13,12 @@ import matplotlib.pyplot as pt
 To Do:
 
 - Alle Methoden müssen noch einen Dokumentations-string bekommen
-- Leistungspreis: Demodaten wo einer anfallen würde - was ist ein sinnvoller Leistungspreis?
-- Abschreibungsmethodik fertigstellen - alternativ Kapitalwert berechnen für feste Nutzungsdauern
+- Leistungspreis: Demodaten wo einer anfallen würde
+- Abschreibungsmethodik fertigstellen
+- Einheiten!!! (100, 1000 Teilungen nerven)
 - Investitionsentscheidung nach Kapitalewert sinnvoller als Amortisation!
 - Woher kamen die PV Daten ?
 - Ist das Einlesen der Daten so ok? - Preis könnte fluktuieren in Excel.
-- Faktoren bei verschiedenen Flächen - macht das Sinn? - Installationskosten?? https://www.rechnerphotovoltaik.de/
 
 '''
 
@@ -28,32 +28,32 @@ To Do:
 
 def berechnung(pvCap, data):
 
-    ersparnis, leistungsPreisErsparnis = berechnungLeistungsPreisErsparnis(pvCap, data) # in €
+    ersparnis, leistungsPreisErsparnis = berechnungLeistungsPreisErsparnis(pvCap, data)
 
     i = 0  # Zählvariable für while-schleife
 
     while (i < data.__len__()):
 
         timestamp = data.iat[i, 0]  # timestamp
-        pvUtil = float(data.iat[i, 1])  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
-        costNet = float(data.iat[i, 2])/100  # [€/kWh] Stromkosten Netz in der betreffenden Stunde
-        revPV = float(data.iat[i, 3])/100  # [€/kWh] Einspeisevergütung in der betreffenden Stunde
-        load = float(data.iat[i, 4])/1000  # [kW] Lastgang in der betreffenden Stunde
+        pvUtil = data.iat[i, 1]  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
+        costNet = data.iat[i, 2]  # [ct/kWh] Stromkosten Netz in der betreffenden Stunde
+        revPV = data.iat[i, 3]  # [ct/kWh] Einspeisevergütung in der betreffenden Stunde
+        load = data.iat[i, 4]  # [W] Lastgang in der betreffenden Stunde
 
-        if ((pvUtil * pvCap) > load):  # falls mehr Solarstrom produziert wird, als Last anfällt, speise Strom ein, erhalte Entgelt
-            ersparnisMomUe = (((pvUtil * pvCap) - load) * revPV + load * costNet) / 4 # in € - Netzentgelte werden gespart und der Nutzer bekommt Einspeisevergütung (durch 4: 15 min)
+        if ((pvUtil * pvCap) > load):  # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+            print("Überkapazität zum Zeitpunkt " + str(timestamp) + "\n")
+            ersparnisMomUe = (((pvUtil * pvCap) - load) * revPV + load * costNet) / 4000  # Netzentgelte werden gespaart und der Nutzer bekommt Einspeisevergütung (4: 15 min; 1000: Wh)
             ersparnis = ersparnis + ersparnisMomUe  # die savings werden um die Einspeisevergütung erhöht
-            print(timestamp + " PV-Output: " + str(pvUtil * pvCap) + "kW,  Lastgang: " + str(load) + "kW"
-            ", momentane Ersparnis: (Ü)" + str(ersparnisMomUe) + "€")  # zur Überprüfung der Rechnung in der Konsole
+            print("momentane Ersparnis: (Ü)" + str(ersparnisMomUe))  # zur Überprüfung der Rechnung in der Konsole
 
         else:
-            ersparnisMomN = ((pvUtil * pvCap) * costNet) / 4 # in € - Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (durch 4: 15 min)
+            ersparnisMomN = ((pvUtil * pvCap) * costNet) / 4000  # die Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (4: 15 min; 1000: Wh)
             ersparnis = ersparnis + ersparnisMomN
 
-            print(timestamp + " PV-Output: " + str(pvUtil * pvCap) + "kW,  Lastgang: " + str(load) + "kW"
-            ", momentane Ersparnis: (N)" + str(ersparnisMomN) + "€")  # zur Überprüfung der Rechnung in der Konsole
+            print(timestamp + "PV-Output: " + str((pvUtil) * pvCap)) + " Lastgang: " + str(load)
+            print("momentane Ersparnis: (N)" + str(ersparnisMomN))  # zur Überprüfung der Rechnung in der Konsole
 
-        print("Gesamtersparnis: "+ str(ersparnis) + "€")  # zur Überprüfung der Rechnung in der Konsole
+        print("Gesamtersparnis: "+ str(ersparnis))  # zur Überprüfung der Rechnung in der Konsole
         i += 1
 
     return (ersparnis, leistungsPreisErsparnis)
@@ -64,24 +64,23 @@ def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistung
 
     ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
 
-    leistungsPreis = float(data.iat[0,5]) # Leistungspreis in €/kW aus Excel
+    leistungspreis =  float(data.iat[1,5]) # Leistungspreis in €/kW aus Excel
 
     maxNachfrage = 0
 
     j = 0  # Zählvariable für while-schleife
 
     while (j < data.__len__()): # Ermittlung der maximalen Stromnachfrage unter Berücksichtigung der PV Nutzung
-        restNachfrage = data["Lastgang_[W]"][j] - pvCap*1000 * data["PV usage [0:1]"][j]
-        if restNachfrage > maxNachfrage:
-            maxNachfrage = restNachfrage # in W
+        vergleichsWert = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
+        if vergleichsWert > maxNachfrage:
+            maxNachfrage = vergleichsWert
         j += 1
 
     if maxNachfrage < data["Lastgang_[W]"].max(): # falls sich die Lastspitze durch die PV Nutzung verringert hat - Einsparung
-        leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000 * leistungsPreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
+        leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000* leistungspreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
         ersparnis = leistungsPreisErsparnis
     else:
         leistungsPreisErsparnis = 0
-
 
     return ersparnis, leistungsPreisErsparnis
 
@@ -93,30 +92,28 @@ def amortisation(gesamtErsparnis, gesamtInvest): # amortisation mit Kapitalwertm
     amortisationsJahre = 0
 
     while (gesamtInvest>einnahmen):
-        einnahmen = einnahmen + ((gesamtErsparnis)/((1+r)**amortisationsJahre))
+        einnahmen = einnahmen + ((gesamtErsparnis/100)/((1+r)**amortisationsJahre))
         amortisationsJahre = amortisationsJahre + 1
 
-    # amortisationsJahre = (gesamtInvest / gesamtErsparnis)
-
+    '''amortisationsWert = (totalInvest / (ersparnis / 100)) # könnte diese Dauer berechnen und dann in einer weiteren Rechnung die
+    '''                                                      # Rückzahlungen mit (i+1)^t abzinsen -> Kapitalwert?
     return amortisationsJahre
 
 
 def rechenThread():
     thread = Thread(target=einlesenAusgeben, args=())
     thread.start()
-    endeAnzeigen()
     while (thread.is_alive()):
         sleep(0.5)
         textErgebnis.update()
         textErgebnis.insert(END, ".")
-    return
 
 #----------------------------------Plotten ---------------------------------------------------------------------
 
 def plot(data):
 
-    #pt.plot(data["Count"], data["PV usage [0:1]"])
-    #pt.show()
+    plt = data.plot(data["Timestamp", "PV usage [0:1]"])
+    plt.show()
 
     return
 
@@ -131,7 +128,7 @@ def einlesenAusgeben():
         data = pd.read_csv(eingabeDatei.get(), sep=";")  # Daten werden aus CSV eingelesen
 
     except:
-        ausgabeText("Der Dateipfad ist nicht korrekt")
+        ausgabeText("Der Dateipfad ist nicht korrekt\n")
         return
 
     ausgabeText("Übersicht der eingegebenen Daten:\n\n")
@@ -141,74 +138,79 @@ def einlesenAusgeben():
 
     try:
 
-        investKostenPanels = float(einlesenKosten())# [€/m²] investitionskosten pro kWp
+        investKosten = float(einlesenKosten())# [€/kWp] investitionskosten pro kWp
 
-        investKostenAufbau = float(einlesenAufbau()) # [€] Investitionskosten Aufbau System (1/3 der Kosten!!)
+        dachFlaeche = int(einlesenFlaeche())# [m²] Dachfläche in Quadratmetern
 
-        panelFlaeche = int(einlesenFlaeche())# [m²] Dachfläche in Quadratmetern
+        normLeistung = float(einlesenLeistung())# [W/m²] Normleistung eines Quadratmeters Solaranlage
 
-        normLeistung = float(einlesenLeistung())/1000# [kW/m²] Normleistung eines Quadratmeters Solaranlage
+        pvCap = (dachFlaeche*normLeistung) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
 
-        pvCap = (panelFlaeche*normLeistung) # [m²*kW/m²] = [kW] PV Kapazität in Kilowatt
+        gesamtInvest = investKosten*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
 
-        gesamtInvest = investKostenAufbau + investKostenPanels*panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
-
-        ausgabeText("Kapazität der PV-Anlage: " + str((pvCap))+" kW\n\n")
-        ausgabeText("Berechnung:\n\n")
+        ausgabeText("Kapazität der PV-Anlage: " + str((pvCap))+" Wp")
+        ausgabeText("\n\n")
+        ausgabeText("Berechnung: \n")
 
 
         ersparnis, leistungsPreisErsparnis = berechnung(pvCap, data)
 
-        gesamtErsparnis = (ersparnis + leistungsPreisErsparnis)
 
     except:
         ausgabeText("Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
 
-    ausgabeText("\n\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis, 2)) + "€\n\n")
 
-    ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
+    gesamtErsparnis = ersparnis + leistungsPreisErsparnis
 
-    ausgabeText("Die Amortisationszeit beträgt: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre \n\n")
+    ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n")
 
-    ausgabeText("Bei einer Gesamtinvestition von: " + str(gesamtInvest) + "€\n\n")
+    ausgabeText("\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
 
-    ausgabeText("\n------------------------------------------------------------------------\n\n")
+    ausgabeText("Die Amortisationszeit beträgt: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre \n")
 
-    ausgabeText("Alternativen:\n")
+    ausgabeText("\nFür Gesamtinvest: " + str(gesamtInvest) + "€\n\n")
+
+    ausgabeText("\n------------------------------------------------------------------------\n")
+
+    ausgabeText("\nAlternativen:\n")
 
     endeAnzeigen()
 
 
     # weitere Flächengrössen berechnen
-    spaces = [panelFlaeche - 10, panelFlaeche - 5, panelFlaeche - 2, panelFlaeche + 2, panelFlaeche + 5,panelFlaeche + 10] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
-    #faktor = [1.5,1.3,1.1,0.9,0.7,0.5] # faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
+    spaces = [dachFlaeche - 3, dachFlaeche - 2, dachFlaeche - 1, dachFlaeche + 1, dachFlaeche + 2,dachFlaeche + 3] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
+    faktor = [1.5,1.3,1.1,0.9,0.7,0.5] # faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
 
 
     for xRoofspace in spaces:
 
-        if (xRoofspace>0):
-            ersparnis, leistungsPreisErsparnis = berechnung(xRoofspace*normLeistung, data)
+        ersparnis, leistungsPreisErsparnis = berechnung(xRoofspace*normLeistung, data)
 
-            gesamtErsparnis = (ersparnis + leistungsPreisErsparnis)
+        gesamtErsparnis = ersparnis + leistungsPreisErsparnis
 
-            gesamtInvest = investKostenAufbau + investKostenPanels*(xRoofspace) # *faktor[spaces.index(xRoofspace)]* neue totale Investitionskosten berechnen
+        gesamtInvest = investKosten*faktor[spaces.index(xRoofspace)]*(xRoofspace*normLeistung)/1000 # neue totale Investitionskosten berechnen
 
-            ausgabeText("\n\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis, 2)) + "€\n\n")
+        ausgabeText("\n\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis / 100, 2)) + "€\n")
 
-            ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
+        ausgabeText("\nDie Leistungsersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
-            ausgabeText("Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre\n\n")
+        ausgabeText("Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre\n")
 
-            ausgabeText("Bei einer Gesamtinvestition von: " + str(gesamtInvest) + "€\n\n")
+        ausgabeText("\nFür Gesamtinvest: " + str(gesamtInvest) + "€\n\n")
 
-            endeAnzeigen()
+        endeAnzeigen()
 
     #-------------------Plotten der Kurven---------------------------
 
-    #plot(data)
+    try:
+        plot(data)
+    except:
+        print("Kein Plot möglich")
 
     return
+
+
 
 #------------------------------------GUI (Darstellung)---------------------------------------------------------
 
@@ -218,16 +220,13 @@ def einlesenAusgeben():
 #------einlesen---------
 
 def einlesenKosten():
-    return eingabeKostenPanels.get()
+    return eingabeKosten.get()
 
 def einlesenFlaeche():
     return eingabeFlaeche.get()
 
 def einlesenLeistung():
     return eingabeLeistung.get()
-
-def einlesenAufbau():
-    return eingabeKostenAufbau.get()
 
 #-----ausgeben-----------
 
@@ -258,7 +257,7 @@ def new(event=None):
     eingabeDatei.delete(0, END)
     eingabeFlaeche.delete(0, END)
     eingabeLeistung.delete(0, END)
-    eingabeKostenPanels.delete(0, END)
+    eingabeKosten.delete(0, END)
     return
 
 def open(event=None):
@@ -291,16 +290,13 @@ eingabeFlaeche = Entry(frameLinks, width = 20)
 labelLeistung= Label(frameLinks, text="Normalleistung [W/m²]")
 eingabeLeistung = Entry(frameLinks, width = 20)
 
-labelKostenPanels= Label(frameLinks, text="Investition Panels [€/m²]")
-eingabeKostenPanels = Entry(frameLinks, width = 20)
-
-labelKostenAufbau= Label(frameLinks, text="Investition Aufbau [€]")
-eingabeKostenAufbau = Entry(frameLinks, width = 20)
+labelKosten= Label(frameLinks, text="Investition [€/kWp]")
+eingabeKosten = Entry(frameLinks, width = 20)
 
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=rechenThread)
 
-textErgebnis = Text(frameRechts, width = 80, height =22, yscrollcommand=scrollbar.set)
+textErgebnis = Text(frameRechts, width = 80, height =20, yscrollcommand=scrollbar.set)
 
 scrollbar.config(command=textErgebnis.yview)
 
@@ -308,7 +304,6 @@ emptyLabel1 = Label(frameLinks, text="")
 emptyLabel2 = Label(frameLinks, text="")
 emptyLabel3 = Label(frameLinks, text="")
 emptyLabel4 = Label(frameLinks, text="")
-
 
 #-------------Events---------------------------
 
@@ -352,15 +347,13 @@ eingabeFlaeche.pack()
 labelLeistung.pack()
 eingabeLeistung.pack()
 
-labelKostenPanels.pack()
-eingabeKostenPanels.pack()
-
-labelKostenAufbau.pack()
-eingabeKostenAufbau.pack()
+labelKosten.pack()
+eingabeKosten.pack()
 
 emptyLabel4.pack()
 
-buttonBerechnen.pack()
+buttonBerechnen.pack(side=BOTTOM)
+
 
 textErgebnis.pack()
 
