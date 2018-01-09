@@ -5,7 +5,6 @@ from threading import Thread
 from time import sleep
 from tkFileDialog import askopenfilename
 import pandas as pd
-import matplotlib.pyplot as pt
 
 #----------------------------------Variablen---------------------------------------------------------------------
 
@@ -13,17 +12,14 @@ import matplotlib.pyplot as pt
 To Do:
 
 - Alle Methoden müssen noch einen Dokumentations-string bekommen
-- Leistungspreis: Demodaten wo einer anfallen würde - was ist ein sinnvoller Leistungspreis? Kroener zitieren
-- Faktoren bei verschiedenen Flächen - macht das Sinn? - Installationskosten?? https://www.rechnerphotovoltaik.de/
-- Ausarbeitung der Ergebnisse - Gebäude vergleichen? Reichen 2-3 Beispiele (PV-Anlagen unterschiedlich!)
 
 '''
 
 #----------------------------------Berechnung--------------------------------------------------------------------
 
-# berechnet die Ersparnis in cent!
 
-def berechnung(pvCap, data):
+
+def berechnung(pvCap, data): # berechnet die Ersparnis in Euro!
 
     ersparnis, leistungsPreisErsparnis = berechnungLeistungsPreisErsparnis(pvCap, data) # in €
 
@@ -57,7 +53,7 @@ def berechnung(pvCap, data):
 
 
 
-def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistungsspitze gekappt wird, dann spart man, falls nicht , dann nicht
+def berechnungLeistungsPreisErsparnis(pvCap, data): # (jährlich) wenn durch PV die Leistungsspitze gekappt wird, wird Geld eingespart
 
     ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
 
@@ -83,7 +79,7 @@ def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistung
     return ersparnis, leistungsPreisErsparnis
 
 
-def amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
+def amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten): # Amortisation mit Abzinsung der jährlichen Ersparnisse
 
     r = 0.05 # zinssatz am Kapitalmarkt
     einnahmen = 0
@@ -94,12 +90,10 @@ def amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten): # amortisation 
         einnahmen = einnahmen + ((gesamtErsparnis-betriebsKosten)/((1+r)**amortisationsJahre))
         amortisationsJahre = amortisationsJahre + 1
 
-    # amortisationsJahre = (gesamtInvest / gesamtErsparnis)
-
     return amortisationsJahre
 
 
-def rechenThread():
+def rechenThread(): # methode erstellt einen Thread, damit die Ergebnisse nach und nach angezeigt werden.
     thread = Thread(target=einlesenAusgeben, args=())
     thread.start()
     endeAnzeigen()
@@ -109,8 +103,8 @@ def rechenThread():
         textErgebnis.insert(END, ".")
     return
 
-def uebersicht():
-    loeschenText()  # löscht die Daten im Textfeld der GUI
+def uebersicht(): # Stellt eine Übersicht über die bisher eingegebenen Daten dar.
+    loeschenText()
 
     try:
         data = pd.read_csv(eingabeDatei.get(), sep=";")  # Daten werden aus CSV eingelesen
@@ -123,41 +117,36 @@ def uebersicht():
     ausgabeText(data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
     ausgabeText("\n\n")
 
-    investKostenPanels = float(einlesenKostenPanels())  # [€/m²] investitionskosten pro kWp
+    try:
 
-    investKostenAufbau = float(einlesenKostenAufbau())  # [€] Investitionskosten Aufbau System
+        investKostenPanels = float(einlesenKostenPanels())# [€/m²] investitionskosten pro kWp
 
-    betriebsKosten = float(einlesenKostenBetrieb()) # [€] jährliche Betriebskosten des Systems
+        investKostenAufbau = float(einlesenKostenAufbau()) # [€] Investitionskosten Aufbau System
 
-    panelFlaeche = int(einlesenFlaeche())  # [m²] Dachfläche in Quadratmetern
+        betriebsKosten = float(einlesenKostenBetrieb())  # [€] jährliche Betriebskosten des Systems
 
-    normLeistung = float(einlesenLeistung()) / 1000  # [kW/m²] Normleistung eines Quadratmeters Solaranlage
+        panelFlaeche = int(einlesenFlaeche())# [m²] Dachfläche in Quadratmetern
 
-    pvCap = (panelFlaeche * normLeistung)  # [m²*kW/m²] = [kW] PV Kapazität in Kilowatt
+        normLeistung = float(einlesenLeistung())/1000# [kW/m²] Normleistung eines Quadratmeters Solaranlage
 
-    gesamtInvest = investKostenAufbau + investKostenPanels * panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
+        pvCap = (panelFlaeche*normLeistung) # [m²*kW/m²] = [kW] PV Kapazität in Kilowatt
 
-    ausgabeText("Kapazität der PV-Anlage: " + str(pvCap) + "kW\n\n")
+        gesamtInvest = investKostenAufbau + investKostenPanels*panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
 
-    ausgabeText("Gesamtinvestition: " + str(gesamtInvest) + "€\n\n")
+        ausgabeText("Kapazität der PV-Anlage: " + str(pvCap) + "kW\n\n")
+        ausgabeText("Gesamtinvestition: " + str(gesamtInvest) + "€\n\n")
 
-    return
-
-#----------------------------------Plotten ---------------------------------------------------------------------
-
-def plot(data):
-
-    #pt.plot(data["Count"], data["PV usage [0:1]"])
-    #pt.show()
+    except:
+        ausgabeText("Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
+        return
 
     return
-
 
 #----------------------------------Funktionalität ----------------------------------------------------------
 
-def einlesenAusgeben():
+def einlesenAusgeben(): # Hauptmethode die GUI und Logik verbindet.
 
-    loeschenText() # löscht die Daten im Textfeld der GUI
+    loeschenText()
 
     try:
         data = pd.read_csv(eingabeDatei.get(), sep=";")  # Daten werden aus CSV eingelesen
@@ -183,10 +172,8 @@ def einlesenAusgeben():
         gesamtInvest = investKostenAufbau + investKostenPanels*panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
 
         ausgabeText("Kapazität der PV-Anlage: " + str(pvCap) + "kW\n\n")
-
         ausgabeText("Gesamtinvestition: " + str(gesamtInvest) + "€\n\n")
         ausgabeText("Berechnung:\n\n")
-
 
         ersparnis, leistungsPreisErsparnis = berechnung(pvCap, data)
 
@@ -216,7 +203,6 @@ def einlesenAusgeben():
     # weitere Flächengrössen berechnen
     spaces = [panelFlaeche - 10, panelFlaeche - 5, panelFlaeche - 2, panelFlaeche + 2, panelFlaeche + 5,panelFlaeche + 10] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
 
-
     for xRoofspace in spaces:
 
         if (xRoofspace>0):
@@ -237,10 +223,6 @@ def einlesenAusgeben():
             ausgabeText("Mit jährlichen Betriebskosten von: " + str(betriebsKosten) + "€\n\n")
 
             endeAnzeigen()
-
-    #-------------------Plotten der Kurven---------------------------
-
-    #plot(data)
 
     return
 
@@ -272,7 +254,7 @@ def ausgabeText(string): #gibt Text im Textfeld aus
     textErgebnis.insert(END, string)
     return
 
-def loeschenText(): #löscht den Text im Textfeld
+def loeschenText(): #löscht den Text im Textfeld der GUI
     textErgebnis.delete("1.0", END)
     return
 
@@ -281,9 +263,6 @@ def endeAnzeigen(): #scrollt zum Ende des Textfeldes
     return
 
 #-----------------Funktionen GUI-Menü---------
-
-def save():
-    return
 
 def schliessen(event=None):
     root.destroy()
@@ -364,11 +343,13 @@ root.config(menu=mLeiste)
 #-------------Untermenü Datei------------------
 
 dateiMenu = Menu(mLeiste)
-mLeiste.add_cascade(label="Datei", menu= dateiMenu)
-dateiMenu.add_command(label="Neu", command= new)
-dateiMenu.add_command(label="Öffnen", command= open)
-dateiMenu.add_command(label="Speichern", command= save)
-dateiMenu.add_command(label="Schliessen", command= schliessen, accelerator= "alt + q")
+#mLeiste.add_cascade(label="Datei", menu= dateiMenu)
+mLeiste.add_command(label="Neu", command= new)
+mLeiste.add_command(label="Öffnen", command= open)
+mLeiste.add_command(label="Schliessen", command= schliessen)
+#dateiMenu.add_command(label="Neu", command= new)
+#dateiMenu.add_command(label="Öffnen", command= open)
+#dateiMenu.add_command(label="Schliessen", command= schliessen)
 
 #-------------Widgets platzieren---------------
 
