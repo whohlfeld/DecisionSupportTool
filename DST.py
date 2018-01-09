@@ -166,7 +166,6 @@ def einlesenAusgeben():
         ausgabeText("Der Dateipfad ist nicht korrekt")
         return
 
-
     try:
 
         investKostenPanels = float(einlesenKostenPanels())# [€/m²] investitionskosten pro kWp
