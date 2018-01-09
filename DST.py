@@ -13,11 +13,7 @@ import matplotlib.pyplot as pt
 To Do:
 
 - Alle Methoden müssen noch einen Dokumentations-string bekommen
-- Leistungspreis: Demodaten wo einer anfallen würde - was ist ein sinnvoller Leistungspreis?
-- Abschreibungsmethodik fertigstellen - alternativ Kapitalwert berechnen für feste Nutzungsdauern
-- Investitionsentscheidung nach Kapitalewert sinnvoller als Amortisation!
-- Woher kamen die PV Daten ?
-- Ist das Einlesen der Daten so ok? - Preis könnte fluktuieren in Excel.
+- Leistungspreis: Demodaten wo einer anfallen würde - was ist ein sinnvoller Leistungspreis? Kroener zitieren
 - Faktoren bei verschiedenen Flächen - macht das Sinn? - Installationskosten?? https://www.rechnerphotovoltaik.de/
 - Ausarbeitung der Ergebnisse - Gebäude vergleichen? Reichen 2-3 Beispiele (PV-Anlagen unterschiedlich!)
 
@@ -72,13 +68,13 @@ def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistung
     j = 0  # Zählvariable für while-schleife
 
     while (j < data.__len__()): # Ermittlung der maximalen Stromnachfrage unter Berücksichtigung der PV Nutzung
-        restNachfrage = data["Lastgang_[W]"][j] - pvCap*1000 * data["PV usage [0:1]"][j]
+        restNachfrage = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
         if restNachfrage > maxNachfrage:
-            maxNachfrage = restNachfrage # in W
+            maxNachfrage = restNachfrage # in kW
         j += 1
 
     if maxNachfrage < data["Lastgang_[W]"].max(): # falls sich die Lastspitze durch die PV Nutzung verringert hat - Einsparung
-        leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000 * leistungsPreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
+        leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage) * leistungsPreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
         ersparnis = leistungsPreisErsparnis
     else:
         leistungsPreisErsparnis = 0
@@ -87,14 +83,15 @@ def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistung
     return ersparnis, leistungsPreisErsparnis
 
 
-def amortisation(gesamtErsparnis, gesamtInvest): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
+def amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
 
     r = 0.05 # zinssatz am Kapitalmarkt
     einnahmen = 0
     amortisationsJahre = 0
 
     while (gesamtInvest>einnahmen):
-        einnahmen = einnahmen + ((gesamtErsparnis)/((1+r)**amortisationsJahre))
+        gesamtInvest = gesamtInvest + betriebsKosten
+        einnahmen = einnahmen + ((gesamtErsparnis-betriebsKosten)/((1+r)**amortisationsJahre))
         amortisationsJahre = amortisationsJahre + 1
 
     # amortisationsJahre = (gesamtInvest / gesamtErsparnis)
@@ -126,13 +123,23 @@ def uebersicht():
     ausgabeText(data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
     ausgabeText("\n\n")
 
+    investKostenPanels = float(einlesenKostenPanels())  # [€/m²] investitionskosten pro kWp
+
+    investKostenAufbau = float(einlesenKostenAufbau())  # [€] Investitionskosten Aufbau System
+
+    betriebsKosten = float(einlesenKostenBetrieb()) # [€] jährliche Betriebskosten des Systems
+
     panelFlaeche = int(einlesenFlaeche())  # [m²] Dachfläche in Quadratmetern
 
     normLeistung = float(einlesenLeistung()) / 1000  # [kW/m²] Normleistung eines Quadratmeters Solaranlage
 
     pvCap = (panelFlaeche * normLeistung)  # [m²*kW/m²] = [kW] PV Kapazität in Kilowatt
 
-    ausgabeText("Kapazität der PV-Anlage: " + str((pvCap)) + " kW\n\n")
+    gesamtInvest = investKostenAufbau + investKostenPanels * panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
+
+    ausgabeText("Kapazität der PV-Anlage: " + str(pvCap) + "kW\n\n")
+
+    ausgabeText("Gesamtinvestition: " + str(gesamtInvest) + "€\n\n")
 
     return
 
@@ -162,9 +169,11 @@ def einlesenAusgeben():
 
     try:
 
-        investKostenPanels = float(einlesenKosten())# [€/m²] investitionskosten pro kWp
+        investKostenPanels = float(einlesenKostenPanels())# [€/m²] investitionskosten pro kWp
 
-        investKostenAufbau = float(einlesenAufbau()) # [€] Investitionskosten Aufbau System (1/3 der Kosten!!)
+        investKostenAufbau = float(einlesenKostenAufbau()) # [€] Investitionskosten Aufbau System
+
+        betriebsKosten = float(einlesenKostenBetrieb())  # [€] jährliche Betriebskosten des Systems
 
         panelFlaeche = int(einlesenFlaeche())# [m²] Dachfläche in Quadratmetern
 
@@ -174,7 +183,9 @@ def einlesenAusgeben():
 
         gesamtInvest = investKostenAufbau + investKostenPanels*panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
 
-        ausgabeText("Kapazität der PV-Anlage: " + str((pvCap))+" kW\n\n")
+        ausgabeText("Kapazität der PV-Anlage: " + str(pvCap) + "kW\n\n")
+
+        ausgabeText("Gesamtinvestition: " + str(gesamtInvest) + "€\n\n")
         ausgabeText("Berechnung:\n\n")
 
 
@@ -190,20 +201,21 @@ def einlesenAusgeben():
 
     ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
-    ausgabeText("Die Amortisationszeit beträgt: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre \n\n")
+    ausgabeText("Die Amortisationszeit beträgt: " + str(amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten)) + " Jahre \n\n")
 
     ausgabeText("Bei einer Gesamtinvestition von: " + str(gesamtInvest) + "€\n\n")
 
+    ausgabeText("Mit jährlichen Betriebskosten von: " + str(betriebsKosten) + "€\n\n")
+
     ausgabeText("\n------------------------------------------------------------------------\n\n")
 
-    ausgabeText("Alternativen:\n")
+    ausgabeText("Alternative Flächen:\n")
 
     endeAnzeigen()
 
 
     # weitere Flächengrössen berechnen
     spaces = [panelFlaeche - 10, panelFlaeche - 5, panelFlaeche - 2, panelFlaeche + 2, panelFlaeche + 5,panelFlaeche + 10] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
-    #faktor = [1.5,1.3,1.1,0.9,0.7,0.5] # faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
 
 
     for xRoofspace in spaces:
@@ -213,15 +225,17 @@ def einlesenAusgeben():
 
             gesamtErsparnis = (ersparnis + leistungsPreisErsparnis)
 
-            gesamtInvest = investKostenAufbau + investKostenPanels*(xRoofspace) # *faktor[spaces.index(xRoofspace)]* neue totale Investitionskosten berechnen
+            gesamtInvest = investKostenAufbau + investKostenPanels*(xRoofspace) # neue Investitionskosten berechnen
 
             ausgabeText("\n\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis, 2)) + "€\n\n")
 
             ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
-            ausgabeText("Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, gesamtInvest), 2)) + " Jahre\n\n")
+            ausgabeText("Die Amortisationszeit beträgt dann: " + str(amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten)) + " Jahre\n\n")
 
             ausgabeText("Bei einer Gesamtinvestition von: " + str(gesamtInvest) + "€\n\n")
+
+            ausgabeText("Mit jährlichen Betriebskosten von: " + str(betriebsKosten) + "€\n\n")
 
             endeAnzeigen()
 
@@ -238,7 +252,7 @@ def einlesenAusgeben():
 
 #------einlesen---------
 
-def einlesenKosten():
+def einlesenKostenPanels():
     return eingabeKostenPanels.get()
 
 def einlesenFlaeche():
@@ -247,8 +261,11 @@ def einlesenFlaeche():
 def einlesenLeistung():
     return eingabeLeistung.get()
 
-def einlesenAufbau():
+def einlesenKostenAufbau():
     return eingabeKostenAufbau.get()
+
+def einlesenKostenBetrieb():
+    return eingabeKostenBetrieb.get()
 
 #-----ausgeben-----------
 
@@ -300,6 +317,7 @@ frameRechts =Frame(root, width=500, height=100)
 frameLinks =Frame(root, width=500, height=100)
 
 labelDateneingabe= Label(frameLinks, text ="Dateneingabe:")
+labelAusgabe= Label(frameRechts, text ="Ausgabe:")
 
 labelInput= Label(frameLinks, text = "Pfad der Input-Datei")
 eingabeDatei = Entry(frameLinks, width = 20)
@@ -318,11 +336,14 @@ eingabeKostenPanels = Entry(frameLinks, width = 20)
 labelKostenAufbau= Label(frameLinks, text="Investition Aufbau [€]")
 eingabeKostenAufbau = Entry(frameLinks, width = 20)
 
+labelKostenBetrieb= Label(frameLinks, text="Betriebskosten [€/Jahr]")
+eingabeKostenBetrieb = Entry(frameLinks, width = 20)
+
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=rechenThread)
 buttonUebersicht = Button(frameLinks,text= "Übersicht", command=uebersicht)
 
-textErgebnis = Text(frameRechts, width = 80, height =22, yscrollcommand=scrollbar.set)
+textErgebnis = Text(frameRechts, width = 80, height =23, yscrollcommand=scrollbar.set)
 
 scrollbar.config(command=textErgebnis.yview)
 
@@ -355,7 +376,8 @@ dateiMenu.add_command(label="Schliessen", command= schliessen, accelerator= "alt
 frameRechts.pack(side = RIGHT)
 frameLinks.pack(side = LEFT)
 
-labelDateneingabe.pack()
+labelDateneingabe.pack(side=TOP)
+labelAusgabe.pack(side=TOP)
 
 emptyLabel1.pack()
 
@@ -379,6 +401,9 @@ eingabeKostenPanels.pack()
 
 labelKostenAufbau.pack()
 eingabeKostenAufbau.pack()
+
+labelKostenBetrieb.pack()
+eingabeKostenBetrieb.pack()
 
 emptyLabel4.pack()
 
