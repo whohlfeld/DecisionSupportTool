@@ -3,195 +3,284 @@
 from Tkinter import *
 from threading import Thread
 from time import sleep
-from tkFileDialog   import askopenfilename
+from tkFileDialog import askopenfilename
 import pandas as pd
-import numpy as np
+import matplotlib.pyplot as pt
 
 #----------------------------------Variablen---------------------------------------------------------------------
 
+'''
+To Do:
 
-investCost = 0# [€/kWp] investitionskosten pro kWp
+- Alle Methoden müssen noch einen Dokumentations-string bekommen
+- Leistungspreis: Demodaten wo einer anfallen würde - was ist ein sinnvoller Leistungspreis? Kroener zitieren
+- Faktoren bei verschiedenen Flächen - macht das Sinn? - Installationskosten?? https://www.rechnerphotovoltaik.de/
+- Ausarbeitung der Ergebnisse - Gebäude vergleichen? Reichen 2-3 Beispiele (PV-Anlagen unterschiedlich!)
 
-roofSpace = 0# [m²] Dachfläche in Quadratmetern
-
-normPower = 0 #[W/m²] Normleistung eines Quadratmeters Solaranlage
-
-pvCap = (roofSpace*normPower) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
-
-totalInvest = investCost*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
-
-
+'''
 
 #----------------------------------Berechnung--------------------------------------------------------------------
 
 # berechnet die Ersparnis in cent!
 
-def berechnung(investCost, roofSpace, normPower, pvCap, data):
+def berechnung(pvCap, data):
 
-    ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
-
-    '''muss noch aus excfel eingelesen werden data.iat[1,5]'''
-
-    leistungspreis =  5.5 # Leistungspreis in €/kW
-
-    maxNachfrage = 0
-
-    j = 0  # Zählvariable für while-schleife
-
-    while (j < data.__len__()):
-        vergleichsWert = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
-        if vergleichsWert > maxNachfrage:
-            maxNachfrage = vergleichsWert
-        j += 1
-
-    if maxNachfrage < data["Lastgang_[W]"].max:
-        leistungspreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage)/1000* leistungspreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
-        ersparnis = leistungspreisErsparnis
-    else:
-        leistungspreisErsparnis = 0
-
-
+    ersparnis, leistungsPreisErsparnis = berechnungLeistungsPreisErsparnis(pvCap, data) # in €
 
     i = 0  # Zählvariable für while-schleife
 
     while (i < data.__len__()):
 
         timestamp = data.iat[i, 0]  # timestamp
-        pvUtil = data.iat[i, 1]  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
-        costNet = data.iat[i, 2]  # [ct/kWh] Stromkosten Netz in der betreffenden Stunde
-        revPV = data.iat[i, 3]  # [ct/kWh] Einspeisevergütung in der betreffenden Stunde
-        load = data.iat[i, 4]  # [W] Lastgang in der betreffenden Stunde
+        pvUtil = float(data.iat[i, 1])  # [-] prozentualer Anteil des maximal erzeugbaren PV Stroms der in der betreffenden Stunde erzeugt wird
+        costNet = float(data.iat[i, 2])/100  # [€/kWh] Stromkosten Netz in der betreffenden Stunde
+        revPV = float(data.iat[i, 3])/100  # [€/kWh] Einspeisevergütung in der betreffenden Stunde
+        load = float(data.iat[i, 4])  # [kW] Lastgang in der betreffenden Stunde
 
-        if ((pvUtil * pvCap) > load):  # falls mehr Solarstrom produziet wird, als Last anfällt, speise Strom ein, erhalte Entgelt
-            print("Überkapazität zum Zeitpunkt " + str(timestamp) + "\n")
-            ersparnisMomUe = (((pvUtil * pvCap) - load) * revPV + load * costNet) / 4000  # Netzentgelte werden gespaart und der Nutzer bekommt Einspeisevergütung (4: 15 min; 1000: Wh)
+        if ((pvUtil * pvCap) > load):  # falls mehr Solarstrom produziert wird, als Last anfällt, speise Strom ein, erhalte Entgelt
+            ersparnisMomUe = (((pvUtil * pvCap) - load) * revPV + load * costNet) / 4 # in € - Netzentgelte werden gespart und der Nutzer bekommt Einspeisevergütung (durch 4: 15 min)
             ersparnis = ersparnis + ersparnisMomUe  # die savings werden um die Einspeisevergütung erhöht
-            print("momentane Ersparnis: (Ü)" + str(ersparnisMomUe))  # zur Überprüfung der Rechnung in der Konsole
+            print(timestamp + " PV-Output: " + str(pvUtil * pvCap) + "kW,  Lastgang: " + str(load) + "kW"
+            ", momentane Ersparnis: (Ü)" + str(ersparnisMomUe) + "€")  # zur Überprüfung der Rechnung in der Konsole
 
         else:
-            ersparnisMomN = ((pvUtil * pvCap) * costNet) / 4000  # die Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (4: 15 min; 1000: Wh)
+            ersparnisMomN = ((pvUtil * pvCap) * costNet) / 4 # in € - Netzentgelte, welche ich ansonsten bezahlen müsste, werden gespaart. (durch 4: 15 min)
             ersparnis = ersparnis + ersparnisMomN
 
-            print(timestamp + "PV-Output: " + str((pvUtil) * pvCap)) + " Lastgang: " + str(load)
-            print("momentane Ersparnis: (N)" + str(ersparnisMomN))  # zur Überprüfung der Rechnung in der Konsole
+            print(timestamp + " PV-Output: " + str(pvUtil * pvCap) + "kW,  Lastgang: " + str(load) + "kW"
+            ", momentane Ersparnis: (N)" + str(ersparnisMomN) + "€")  # zur Überprüfung der Rechnung in der Konsole
 
-        print("Gesamtersparnis: "+ str(ersparnis))  # zur Überprüfung der Rechnung in der Konsole
+        print("Gesamtersparnis: "+ str(ersparnis) + "€")  # zur Überprüfung der Rechnung in der Konsole
         i += 1
 
-    return (ersparnis, leistungspreisErsparnis)
+    return (ersparnis, leistungsPreisErsparnis)
 
 
 
-def amortisation(ersparnis, totalInvest): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
+def berechnungLeistungsPreisErsparnis(pvCap, data): # wenn durch PV die Leistungsspitze gekappt wird, dann spart man, falls nicht , dann nicht
 
-    amortisationsWert = (totalInvest / (ersparnis / 100))
+    ersparnis = 0 # Einsparungen, die pro Jahr durch die Solaranlage erreicht werden
 
-    return amortisationsWert
+    leistungsPreis = float(data.iat[0,5]) # Leistungspreis in €/kW aus Excel
+
+    maxNachfrage = 0
+
+    j = 0  # Zählvariable für while-schleife
+
+    while (j < data.__len__()): # Ermittlung der maximalen Stromnachfrage unter Berücksichtigung der PV Nutzung
+        restNachfrage = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
+        if restNachfrage > maxNachfrage:
+            maxNachfrage = restNachfrage # in kW
+        j += 1
+
+    if maxNachfrage < data["Lastgang_[W]"].max(): # falls sich die Lastspitze durch die PV Nutzung verringert hat - Einsparung
+        leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage) * leistungsPreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
+        ersparnis = leistungsPreisErsparnis
+    else:
+        leistungsPreisErsparnis = 0
+
+
+    return ersparnis, leistungsPreisErsparnis
+
+
+def amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten): # amortisation mit Kapitalwertmethode/Rentenbarwertfaktor
+
+    r = 0.05 # zinssatz am Kapitalmarkt
+    einnahmen = 0
+    amortisationsJahre = 0
+
+    while (gesamtInvest>einnahmen):
+        gesamtInvest = gesamtInvest + betriebsKosten
+        einnahmen = einnahmen + ((gesamtErsparnis-betriebsKosten)/((1+r)**amortisationsJahre))
+        amortisationsJahre = amortisationsJahre + 1
+
+    # amortisationsJahre = (gesamtInvest / gesamtErsparnis)
+
+    return amortisationsJahre
 
 
 def rechenThread():
     thread = Thread(target=einlesenAusgeben, args=())
     thread.start()
+    endeAnzeigen()
     while (thread.is_alive()):
         sleep(0.5)
         textErgebnis.update()
         textErgebnis.insert(END, ".")
+    return
+
+def uebersicht():
+    loeschenText()  # löscht die Daten im Textfeld der GUI
+
+    try:
+        data = pd.read_csv(eingabeDatei.get(), sep=";")  # Daten werden aus CSV eingelesen
+
+    except:
+        ausgabeText("Der Dateipfad ist nicht korrekt")
+        return
+
+    ausgabeText("Übersicht der eingegebenen Daten:\n\n")
+    ausgabeText(data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
+    ausgabeText("\n\n")
+
+    investKostenPanels = float(einlesenKostenPanels())  # [€/m²] investitionskosten pro kWp
+
+    investKostenAufbau = float(einlesenKostenAufbau())  # [€] Investitionskosten Aufbau System
+
+    betriebsKosten = float(einlesenKostenBetrieb()) # [€] jährliche Betriebskosten des Systems
+
+    panelFlaeche = int(einlesenFlaeche())  # [m²] Dachfläche in Quadratmetern
+
+    normLeistung = float(einlesenLeistung()) / 1000  # [kW/m²] Normleistung eines Quadratmeters Solaranlage
+
+    pvCap = (panelFlaeche * normLeistung)  # [m²*kW/m²] = [kW] PV Kapazität in Kilowatt
+
+    gesamtInvest = investKostenAufbau + investKostenPanels * panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
+
+    ausgabeText("Kapazität der PV-Anlage: " + str(pvCap) + "kW\n\n")
+
+    ausgabeText("Gesamtinvestition: " + str(gesamtInvest) + "€\n\n")
+
+    return
 
 #----------------------------------Plotten ---------------------------------------------------------------------
 
-def plot():
-    '''
-    plt = data.plot(data["Timestamp", "PV usage [0:1]"])
-    plt.show()
-    '''
+def plot(data):
+
+    #pt.plot(data["Count"], data["PV usage [0:1]"])
+    #pt.show()
+
     return
 
-#----------------------------------Funktionalität GUI -----------------------------------------------------------
+
+#----------------------------------Funktionalität ----------------------------------------------------------
 
 def einlesenAusgeben():
 
-    textErgebnis.delete("1.0",END)
+    loeschenText() # löscht die Daten im Textfeld der GUI
 
     try:
-        data = pd.read_csv(entryInput.get(), sep=";")  # Daten werden aus CSV eingelesen
+        data = pd.read_csv(eingabeDatei.get(), sep=";")  # Daten werden aus CSV eingelesen
 
     except:
-        textErgebnis.insert(END, "Der Dateipfad ist nicht korrekt\n")
+        ausgabeText("Der Dateipfad ist nicht korrekt")
         return
 
-    textErgebnis.insert(END, "Übersicht der eingegebenen Daten:\n\n")
-    textErgebnis.insert(END, data.describe())  # statistische Auswertung zu den Eingelesenen Daten wird angezeigt
-    textErgebnis.insert(END, "\n\n")
+    try:
+
+        investKostenPanels = float(einlesenKostenPanels())# [€/m²] investitionskosten pro kWp
+
+        investKostenAufbau = float(einlesenKostenAufbau()) # [€] Investitionskosten Aufbau System
+
+        betriebsKosten = float(einlesenKostenBetrieb())  # [€] jährliche Betriebskosten des Systems
+
+        panelFlaeche = int(einlesenFlaeche())# [m²] Dachfläche in Quadratmetern
+
+        normLeistung = float(einlesenLeistung())/1000# [kW/m²] Normleistung eines Quadratmeters Solaranlage
+
+        pvCap = (panelFlaeche*normLeistung) # [m²*kW/m²] = [kW] PV Kapazität in Kilowatt
+
+        gesamtInvest = investKostenAufbau + investKostenPanels*panelFlaeche  # [€/m²*m²] = [€] Gesamtinvestition in €
+
+        ausgabeText("Kapazität der PV-Anlage: " + str(pvCap) + "kW\n\n")
+
+        ausgabeText("Gesamtinvestition: " + str(gesamtInvest) + "€\n\n")
+        ausgabeText("Berechnung:\n\n")
 
 
-    '''try'''
+        ersparnis, leistungsPreisErsparnis = berechnung(pvCap, data)
 
-    investCost = float(entryCost.get())# [€/kWp] investitionskosten pro kWp
+        gesamtErsparnis = (ersparnis + leistungsPreisErsparnis)
 
-    roofSpace = int(entryFlaeche.get())# [m²] Dachfläche in Quadratmetern
-
-    normPower = float(entryPower.get())# [W/m²] Normleistung eines Quadratmeters Solaranlage
-
-    pvCap = (roofSpace*normPower) # [m²*W/m²] = [W] PV Kapazität in Kilowatt
-
-    totalInvest = investCost*(pvCap/1000)  # [€/kWp*kWp] = [€] Gesamtinvestition in €
-
-    textErgebnis.insert(END, "Kapazität der PV-Anlage: " + str((pvCap))+" Wp")
-    textErgebnis.insert(END, "\n\n")
-
-    textErgebnis.insert(END, "Berechnung... \n")
-
-    ersparnis, leistungsErsparnis = berechnung(investCost, roofSpace, normPower, pvCap, data)
-
-
-    '''except:
-        textErgebnis.insert(END, "Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
+    except:
+        ausgabeText("Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
-    '''
 
-    gesamtErsparnis = ersparnis + leistungsErsparnis
+    ausgabeText("\n\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis, 2)) + "€\n\n")
 
-    textErgebnis.insert(END, "\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
+    ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
-    textErgebnis.insert(END, "\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
+    ausgabeText("Die Amortisationszeit beträgt: " + str(amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten)) + " Jahre \n\n")
 
-    textErgebnis.insert(END, "Die Amortisationszeit beträgt: " + str(round(amortisation(gesamtErsparnis, totalInvest), 2)) + " Jahre \n")
+    ausgabeText("Bei einer Gesamtinvestition von: " + str(gesamtInvest) + "€\n\n")
 
-    textErgebnis.insert(END, "\nAlternativen:\n")
+    ausgabeText("Mit jährlichen Betriebskosten von: " + str(betriebsKosten) + "€\n\n")
 
-    textErgebnis.see("end")
+    ausgabeText("\n------------------------------------------------------------------------\n\n")
+
+    ausgabeText("Alternative Flächen:\n")
+
+    endeAnzeigen()
 
 
     # weitere Flächengrössen berechnen
-    spaces = [roofSpace - 3, roofSpace - 2, roofSpace - 1, roofSpace + 1, roofSpace + 2,roofSpace + 3] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
-    faktor = [1.5,1.3,1.1,0.9,0.7,0.5] #faktor, den ich bei den Investitionskosten spare, wenn ich mehr oder weniger Fläche installiere
+    spaces = [panelFlaeche - 10, panelFlaeche - 5, panelFlaeche - 2, panelFlaeche + 2, panelFlaeche + 5,panelFlaeche + 10] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
 
 
     for xRoofspace in spaces:
 
-        ersparnis, leistungsErsparnis = berechnung(investCost, xRoofspace, normPower, xRoofspace*normPower, data)
+        if (xRoofspace>0):
+            ersparnis, leistungsPreisErsparnis = berechnung(xRoofspace*normLeistung, data)
 
-        gesamtErsparnis = ersparnis + leistungsErsparnis
+            gesamtErsparnis = (ersparnis + leistungsPreisErsparnis)
 
-        totalInvest = investCost*faktor[spaces.index(xRoofspace)]*(xRoofspace*normPower)/1000 # neue totale Investitionskosten berechnen
+            gesamtInvest = investKostenAufbau + investKostenPanels*(xRoofspace) # neue Investitionskosten berechnen
 
-        textErgebnis.insert(END, "\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis / 100, 2)) + "€\n\n")
+            ausgabeText("\n\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis, 2)) + "€\n\n")
 
-        textErgebnis.insert(END, "\nDie Leistungsersparnis beträgt: " + str(leistungsErsparnis) + "€\n\n")
+            ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
 
-        textErgebnis.insert(END, "Die Amortisationszeit beträgt dann: " + str(round(amortisation(gesamtErsparnis, totalInvest), 2)) + " Jahre\n")
+            ausgabeText("Die Amortisationszeit beträgt dann: " + str(amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten)) + " Jahre\n\n")
 
-        textErgebnis.see("end")
+            ausgabeText("Bei einer Gesamtinvestition von: " + str(gesamtInvest) + "€\n\n")
+
+            ausgabeText("Mit jährlichen Betriebskosten von: " + str(betriebsKosten) + "€\n\n")
+
+            endeAnzeigen()
 
     #-------------------Plotten der Kurven---------------------------
 
-    try:
-        plot(data)
-    except:
-        print("Kein Plot möglich")
+    #plot(data)
 
     return
 
+#------------------------------------GUI (Darstellung)---------------------------------------------------------
+
+
+#-----------------Lesen/schreiben GUI----------
+
+#------einlesen---------
+
+def einlesenKostenPanels():
+    return eingabeKostenPanels.get()
+
+def einlesenFlaeche():
+    return eingabeFlaeche.get()
+
+def einlesenLeistung():
+    return eingabeLeistung.get()
+
+def einlesenKostenAufbau():
+    return eingabeKostenAufbau.get()
+
+def einlesenKostenBetrieb():
+    return eingabeKostenBetrieb.get()
+
+#-----ausgeben-----------
+
+def ausgabeText(string): #gibt Text im Textfeld aus
+    textErgebnis.insert(END, string)
+    return
+
+def loeschenText(): #löscht den Text im Textfeld
+    textErgebnis.delete("1.0", END)
+    return
+
+def endeAnzeigen(): #scrollt zum Ende des Textfeldes
+    textErgebnis.see("end")
+    return
+
+#-----------------Funktionen GUI-Menü---------
 
 def save():
     return
@@ -203,23 +292,16 @@ def schliessen(event=None):
 
 def new(event=None):
     textErgebnis.delete("1.0",END)
-    entryInput.delete(0,END)
-    entryFlaeche.delete(0,END)
-    entryPower.delete(0,END)
-    entryCost.delete(0,END)
+    eingabeDatei.delete(0, END)
+    eingabeFlaeche.delete(0, END)
+    eingabeLeistung.delete(0, END)
+    eingabeKostenPanels.delete(0, END)
     return
 
 def open(event=None):
     path = askopenfilename()
-    entryInput.insert(END, path)
+    eingabeDatei.insert(END, path)
     errmsg = 'Error!'
-
-
-
-
-#----------------------------------------------------------GUI-----------------------------------------------------
-
-
 
 #-------------Hauptfenster initialisieren------
 
@@ -234,25 +316,33 @@ frameRechts =Frame(root, width=500, height=100)
 frameLinks =Frame(root, width=500, height=100)
 
 labelDateneingabe= Label(frameLinks, text ="Dateneingabe:")
+labelAusgabe= Label(frameRechts, text ="Ausgabe:")
 
 labelInput= Label(frameLinks, text = "Pfad der Input-Datei")
-entryInput = Entry(frameLinks, width = 20)
+eingabeDatei = Entry(frameLinks, width = 20)
 
 labelSolaranlage= Label(frameLinks, text ="Daten Solaranlage:")
 
 labelFlaeche= Label(frameLinks, text="Fläche [m²]")
-entryFlaeche = Entry(frameLinks, width = 20)
+eingabeFlaeche = Entry(frameLinks, width = 20)
 
-labelPower= Label(frameLinks, text="Normalleistung [W/m²]")
-entryPower = Entry(frameLinks, width = 20)
+labelLeistung= Label(frameLinks, text="Normalleistung [W/m²]")
+eingabeLeistung = Entry(frameLinks, width = 20)
 
-labelCost= Label(frameLinks, text="Investition [€/kWp]")
-entryCost = Entry(frameLinks, width = 20)
+labelKostenPanels= Label(frameLinks, text="Investition Panels [€/m²]")
+eingabeKostenPanels = Entry(frameLinks, width = 20)
+
+labelKostenAufbau= Label(frameLinks, text="Investition Aufbau [€]")
+eingabeKostenAufbau = Entry(frameLinks, width = 20)
+
+labelKostenBetrieb= Label(frameLinks, text="Betriebskosten [€/Jahr]")
+eingabeKostenBetrieb = Entry(frameLinks, width = 20)
 
 
 buttonBerechnen = Button(frameLinks,text= "Berechnen", command=rechenThread)
+buttonUebersicht = Button(frameLinks,text= "Übersicht", command=uebersicht)
 
-textErgebnis = Text(frameRechts, width = 80, height =20, yscrollcommand=scrollbar.set)
+textErgebnis = Text(frameRechts, width = 80, height =23, yscrollcommand=scrollbar.set)
 
 scrollbar.config(command=textErgebnis.yview)
 
@@ -260,6 +350,7 @@ emptyLabel1 = Label(frameLinks, text="")
 emptyLabel2 = Label(frameLinks, text="")
 emptyLabel3 = Label(frameLinks, text="")
 emptyLabel4 = Label(frameLinks, text="")
+
 
 #-------------Events---------------------------
 
@@ -284,12 +375,13 @@ dateiMenu.add_command(label="Schliessen", command= schliessen, accelerator= "alt
 frameRechts.pack(side = RIGHT)
 frameLinks.pack(side = LEFT)
 
-labelDateneingabe.pack()
+labelDateneingabe.pack(side=TOP)
+labelAusgabe.pack(side=TOP)
 
 emptyLabel1.pack()
 
 labelInput.pack()
-entryInput.pack()
+eingabeDatei.pack()
 
 emptyLabel2.pack()
 
@@ -298,18 +390,24 @@ labelSolaranlage.pack()
 emptyLabel3.pack()
 
 labelFlaeche.pack()
-entryFlaeche.pack()
+eingabeFlaeche.pack()
 
-labelPower.pack()
-entryPower.pack()
+labelLeistung.pack()
+eingabeLeistung.pack()
 
-labelCost.pack()
-entryCost.pack()
+labelKostenPanels.pack()
+eingabeKostenPanels.pack()
+
+labelKostenAufbau.pack()
+eingabeKostenAufbau.pack()
+
+labelKostenBetrieb.pack()
+eingabeKostenBetrieb.pack()
 
 emptyLabel4.pack()
 
-buttonBerechnen.pack(side=BOTTOM)
-
+buttonBerechnen.pack(side=RIGHT)
+buttonUebersicht.pack(side=LEFT)
 
 textErgebnis.pack()
 
