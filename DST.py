@@ -6,12 +6,10 @@ from time import sleep
 from tkFileDialog import askopenfilename
 import pandas as pd
 
-#----------------------------------Variablen---------------------------------------------------------------------
+#----------------------------------Kommentare---------------------------------------------------------------------
 
 '''
 To Do:
-
-- Alle Methoden müssen noch einen Dokumentations-string bekommen
 
 '''
 
@@ -64,13 +62,13 @@ def berechnungLeistungsPreisErsparnis(pvCap, data): # (jährlich) wenn durch PV 
     j = 0  # Zählvariable für while-schleife
 
     while (j < data.__len__()): # Ermittlung der maximalen Stromnachfrage unter Berücksichtigung der PV Nutzung
-        restNachfrage = data["Lastgang_[W]"][j] - pvCap * data["PV usage [0:1]"][j]
+        restNachfrage = data["Lastgang_[kW]"][j] - pvCap * data["PV usage [0:1]"][j]
         if restNachfrage > maxNachfrage:
             maxNachfrage = restNachfrage # in kW
         j += 1
 
-    if maxNachfrage < data["Lastgang_[W]"].max(): # falls sich die Lastspitze durch die PV Nutzung verringert hat - Einsparung
-        leistungsPreisErsparnis = (data["Lastgang_[W]"].max() - maxNachfrage) * leistungsPreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
+    if maxNachfrage < data["Lastgang_[kW]"].max(): # falls sich die Lastspitze durch die PV Nutzung verringert hat - Einsparung
+        leistungsPreisErsparnis = (data["Lastgang_[kW]"].max() - maxNachfrage) * leistungsPreis # in kW umgerechnet und dann mit Leistungspreis multipliziert
         ersparnis = leistungsPreisErsparnis
     else:
         leistungsPreisErsparnis = 0
@@ -87,8 +85,9 @@ def amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten): # Amortisation 
 
     while (gesamtInvest>einnahmen):
         gesamtInvest = gesamtInvest + betriebsKosten
-        einnahmen = einnahmen + ((gesamtErsparnis-betriebsKosten)/((1+r)**amortisationsJahre))
+        einnahmen = einnahmen + ((gesamtErsparnis)/((1+r)**amortisationsJahre))
         amortisationsJahre = amortisationsJahre + 1
+        print("Amortisationsjahre: " + str(amortisationsJahre)+ " Einnahmen: " + str(einnahmen))
 
     return amortisationsJahre
 
@@ -122,8 +121,6 @@ def uebersicht(): # Stellt eine Übersicht über die bisher eingegebenen Daten d
         investKostenPanels = float(einlesenKostenPanels())# [€/m²] investitionskosten pro kWp
 
         investKostenAufbau = float(einlesenKostenAufbau()) # [€] Investitionskosten Aufbau System
-
-        betriebsKosten = float(einlesenKostenBetrieb())  # [€] jährliche Betriebskosten des Systems
 
         panelFlaeche = int(einlesenFlaeche())# [m²] Dachfläche in Quadratmetern
 
@@ -177,15 +174,15 @@ def einlesenAusgeben(): # Hauptmethode die GUI und Logik verbindet.
 
         ersparnis, leistungsPreisErsparnis = berechnung(pvCap, data)
 
-        gesamtErsparnis = (ersparnis + leistungsPreisErsparnis)
+        gesamtErsparnis = (ersparnis + leistungsPreisErsparnis-betriebsKosten)
 
     except:
         ausgabeText("Zur Berechnung fehlen Werte für die PV-Anlage in der Eingabe\n")
         return
 
-    ausgabeText("\n\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis, 2)) + "€\n\n")
+    ausgabeText("\n\nDie gesamte jährliche Ersparnis beträgt: " + str(round(gesamtErsparnis, 2)) + "€\n\n") # Betriebskosten eingerechnet
 
-    ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
+    ausgabeText("Die Leistungspreisersparnis beträgt davon: " + str(leistungsPreisErsparnis) + "€\n\n")
 
     ausgabeText("Die Amortisationszeit beträgt: " + str(amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten)) + " Jahre \n\n")
 
@@ -201,20 +198,25 @@ def einlesenAusgeben(): # Hauptmethode die GUI und Logik verbindet.
 
 
     # weitere Flächengrössen berechnen
-    spaces = [panelFlaeche - 10, panelFlaeche - 5, panelFlaeche - 2, panelFlaeche + 2, panelFlaeche + 5,panelFlaeche + 10] # hier noch die Fälle einbauen falls die installierte Fläche kleiner als 4 m² ist!
+    spaces = [panelFlaeche - 10, panelFlaeche - 5, panelFlaeche - 2, panelFlaeche + 2, panelFlaeche + 5,panelFlaeche + 10]
+
+    #betriebsKostenQM = betriebsKosten / panelFlaeche
 
     for xRoofspace in spaces:
 
         if (xRoofspace>0):
+
+            #betriebsKosten = betriebsKostenQM * xRoofspace
+
             ersparnis, leistungsPreisErsparnis = berechnung(xRoofspace*normLeistung, data)
 
-            gesamtErsparnis = (ersparnis + leistungsPreisErsparnis)
+            gesamtErsparnis = (ersparnis + leistungsPreisErsparnis-betriebsKosten)
 
             gesamtInvest = investKostenAufbau + investKostenPanels*(xRoofspace) # neue Investitionskosten berechnen
 
             ausgabeText("\n\nDie jährliche Ersparnis mit " + str(xRoofspace) + " m² installierter Fläche beträgt: "+ str(round(gesamtErsparnis, 2)) + "€\n\n")
 
-            ausgabeText("Die Leistungspreisersparnis beträgt: " + str(leistungsPreisErsparnis) + "€\n\n")
+            ausgabeText("Die Leistungspreisersparnis beträgt davon: " + str(leistungsPreisErsparnis) + "€\n\n")
 
             ausgabeText("Die Amortisationszeit beträgt dann: " + str(amortisation(gesamtErsparnis, gesamtInvest, betriebsKosten)) + " Jahre\n\n")
 
@@ -275,6 +277,9 @@ def new(event=None):
     eingabeFlaeche.delete(0, END)
     eingabeLeistung.delete(0, END)
     eingabeKostenPanels.delete(0, END)
+    eingabeKostenAufbau.delete(0, END)
+    eingabeKostenBetrieb.delete(0, END)
+
     return
 
 def open(event=None):
@@ -343,13 +348,9 @@ root.config(menu=mLeiste)
 #-------------Untermenü Datei------------------
 
 dateiMenu = Menu(mLeiste)
-#mLeiste.add_cascade(label="Datei", menu= dateiMenu)
 mLeiste.add_command(label="Neu", command= new)
 mLeiste.add_command(label="Öffnen", command= open)
 mLeiste.add_command(label="Schliessen", command= schliessen)
-#dateiMenu.add_command(label="Neu", command= new)
-#dateiMenu.add_command(label="Öffnen", command= open)
-#dateiMenu.add_command(label="Schliessen", command= schliessen)
 
 #-------------Widgets platzieren---------------
 
