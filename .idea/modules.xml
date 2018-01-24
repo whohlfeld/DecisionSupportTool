@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/DecisionSupportTool.iml" filepath="$PROJECT_DIR$/.idea/DecisionSupportTool.iml" />
+      <module fileurl="file://$USER_HOME$/Google Drive/RaspPi Project/Raspberry/radio-channel-skill/mycroft-skills/.idea/mycroft-skills.iml" filepath="$USER_HOME$/Google Drive/RaspPi Project/Raspberry/radio-channel-skill/mycroft-skills/.idea/mycroft-skills.iml" />
+      <module fileurl="file://$USER_HOME$/Google Drive/RaspPi Project/Raspberry/radio-channel-skill/radio-channel-skill/.idea/radio-channel-skill.iml" filepath="$USER_HOME$/Google Drive/RaspPi Project/Raspberry/radio-channel-skill/radio-channel-skill/.idea/radio-channel-skill.iml" />
     </modules>
   </component>
 </project>
